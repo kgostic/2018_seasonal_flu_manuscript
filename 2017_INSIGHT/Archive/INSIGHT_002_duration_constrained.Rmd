@@ -1,0 +1,287 @@
+---
+title: "002 prolonged symptoms"
+author: "Katie Gostic"
+date: "11/1/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+setwd('~/Dropbox/R/2017_INSIGHT/')
+rm(list = ls())
+source('Import_FLU002.R')
+cols = colors()[c(506, 499, 475)]
+set.seed(91)
+```
+Notes on data formatting from Deborah Wentworth:
+
+* symdur is symptom duration (days) prior to enrollment
+* date info is for enrollment date
+* fluvac6 and fluvac12 are flu vaccination in last 6 or last 12 months
+* anyvac combines values from fluvac6 and fluvac12, whichever was collected for a given patient is reported.
+* anyav is use of antivirals at any time
+* anydx is any diagnosis in the medical history section
+* flutype is subtype: 1=H1N1, 2=H3N2, 3=flu B, 4=PCR negative, 5=Inf A, subtype unknown, and 6=coinfection with multiple strains
+* resolved is symptom resolution within 14 days
+* country code is the 3 letter code for country of enrollment - think the abbreviations will be obvious
+
+
+Notes on duration of symptoms:
+A review by Carrat et al. (2007) of challenge studies in healthy human volunteers suggests that influenza symptoms typically resolve fully within 8-9 days of inoculation. This led us to classify patients with the following characteristics as having long-lasting symptoms:
+
+* Symptoms lasting 10 or more days prior to study enrollment (this implies that symptoms on day 10 were still serious enough to send patients to the doctor, and most likely lasted at least a few days longer.)
+* Symptoms not resolved on day 14 of enrollment (implies that symptoms lasted longer than 14 days, as most patients had symptoms for at least one day prior to enrollment.)
+
+```{r}
+# use the above definition to define a column for prolonged symptoms
+dat.002$prolonged.symp = as.numeric(dat.002$symdur >= 10 | dat.002$resolved == "0")
+```
+
+
+#### Visualize the relationship between age and prob of H1N1 infection
+```{r warning = FALSE, echo = FALSE}
+# Select only cases with confirmed H1N1, and whose duration of symptoms is known
+valid = dat.002[dat.002$H1N1 == 1 & !is.na(dat.002$prolonged.symp) & !is.na(dat.002$H1N1), ]
+tab = table(valid$age, valid$prolonged.symp)
+props = tab[,2]/rowSums(tab)
+CIs = sapply(X = 1:nrow(tab), FUN = function(ii){
+pp = prop.test(x = tab[ii, 2], n = sum(tab[ii,]))
+pp$conf.int[1:2]
+} )
+plot(as.numeric(rownames(tab)), props, ylim = c(0, 1), xlim = c(10, 100), xlab = 'age', ylab = 'prop infected', col = 'lightblue', pch = 16, main = 'H1N1: Observed prop. w. prolonged symp. by age')
+points(as.numeric(rownames(tab)), props, col = 'dodgerblue')
+segments(x0 = as.numeric(rownames(tab)), y0 = CIs[1,], y1 = CIs[2,], col = 'lightblue')
+```
+
+
+
+#### Visualize the relationship between age and prob of H3N2 infection
+```{r warning = FALSE, echo = FALSE}
+valid = dat.002[dat.002$H3N2 == 1 & !is.na(dat.002$prolonged.symp) & !is.na(dat.002$H3N2), ]
+tab = table(valid$age, valid$prolonged.symp)
+props = tab[,2]/rowSums(tab)
+CIs = sapply(X = 1:nrow(tab), FUN = function(ii){
+pp = prop.test(x = tab[ii, 2], n = sum(tab[ii,]))
+pp$conf.int[1:2]
+} )
+plot(as.numeric(rownames(tab)), props, ylim = c(0, 1), xlim = c(10, 100), xlab = 'age', ylab = 'prop infected', col = 'pink3', pch = 16, main = 'H3N2: Observed prop. prop. w. prolonged symp. by age')
+points(as.numeric(rownames(tab)), props, col = 'firebrick1')
+segments(x0 = as.numeric(rownames(tab)), y0 = CIs[1,], y1 = CIs[2,], col = 'pink3')
+```
+
+#### Visualize the relationship between country and prolonged symptoms
+
+H1N1
+
+```{r warning = FALSE, echo = FALSE}
+valid = dat.002[dat.002$H1N1 == 1 & !is.na(dat.002$prolonged.symp) & !is.na(dat.002$H1N1), ]
+tab = table(valid$country, valid$prolonged.symp)
+props = tab[,2]/rowSums(tab)
+CIs = sapply(X = 1:nrow(tab), FUN = function(ii){
+pp = prop.test(x = tab[ii, 2], n = sum(tab[ii,]))
+pp$conf.int[1:2]
+} )
+ord = order(props)
+plot(1:nrow(tab), props[ord], ylim = c(0, 1), xlab = '', ylab = 'prop w. prolonged symp.', col = 'lightblue', pch = 16, main = 'H1N1: Observed prop. w. prolonged symp. by country', xaxt = 'n')
+axis(1, at = 1:nrow(tab), labels = rownames(tab)[ord], las = 3)
+points(1:nrow(tab), props[ord], col = 'dodgerblue')
+segments(x0 = 1:nrow(tab), y0 = CIs[1,ord], y1 = CIs[2,ord], col = 'lightblue')
+```
+
+H3N2
+
+```{r warning = FALSE, echo = FALSE}
+valid = dat.002[dat.002$H1N1 == 1 & !is.na(dat.002$prolonged.symp) & !is.na(dat.002$H1N1), ]
+tab = table(valid$country, valid$prolonged.symp)
+props = tab[,2]/rowSums(tab)
+CIs = sapply(X = 1:nrow(tab), FUN = function(ii){
+pp = prop.test(x = tab[ii, 2], n = sum(tab[ii,]))
+pp$conf.int[1:2]
+} )
+ord = order(props)
+plot(1:nrow(tab), props[ord], ylim = c(0, 1), xlab = '', ylab = 'prop w. prolonged symp.', col = 'pink3', pch = 16, main = 'H3N2: Observed prop. w. prolonged symp. by country', xaxt = 'n')
+axis(1, at = 1:nrow(tab), labels = rownames(tab)[ord], las = 3)
+points(1:nrow(tab), props[ord], col = 'firebrick1')
+segments(x0 = 1:nrow(tab), y0 = CIs[1,ord], y1 = CIs[2,ord], col = 'pink3')
+```
+
+
+#### Visualize the relationship between season and prob infection
+
+H1N1
+
+```{r warning = FALSE, echo = FALSE}
+valid = dat.002[dat.002$H1N1 == 1 & !is.na(dat.002$prolonged.symp) & !is.na(dat.002$H1N1), ]
+tab = table(valid$country, valid$prolonged.symp)
+props = tab[,2]/rowSums(tab)
+CIs = sapply(X = 1:nrow(tab), FUN = function(ii){
+pp = prop.test(x = tab[ii, 2], n = sum(tab[ii,]))
+pp$conf.int[1:2]
+} )
+#ord = order(props)
+ord = 1:nrow(tab)
+plot(1:nrow(tab), props[ord], ylim = c(0, 1), xlab = '', ylab = 'prop w. prolonged symp.', col = 'lightblue', pch = 16, main = 'H1N1: Observed prop. w. prolonged symp. by season', xaxt = 'n')
+axis(1, at = 1:nrow(tab), labels = rownames(tab)[ord], las = 3)
+points(1:nrow(tab), props[ord], col = 'dodgerblue')
+segments(x0 = 1:nrow(tab), y0 = CIs[1,ord], y1 = CIs[2,ord], col = 'lightblue')
+```
+
+H3N2
+
+```{r warning = FALSE, echo = FALSE}
+valid = dat.002[dat.002$H3N2 == 1 & !is.na(dat.002$prolonged.symp) & !is.na(dat.002$H3N2), ]
+tab = table(valid$season, valid$prolonged.symp)
+props = tab[,2]/rowSums(tab)
+CIs = sapply(X = 1:nrow(tab), FUN = function(ii){
+pp = prop.test(x = tab[ii, 2], n = sum(tab[ii,]))
+pp$conf.int[1:2]
+} )
+#ord = order(props)
+ord = 1:nrow(tab)
+plot(1:nrow(tab), props[ord], ylim = c(0, 1), xlab = '', ylab = 'prop w. prolonged symp.', col = 'pink3', pch = 16, main = 'H3N2: Observed prop. w. prolonged symp. by season', xaxt = 'n')
+axis(1, at = 1:nrow(tab), labels = rownames(tab)[ord], las = 3)
+points(1:nrow(tab), props[ord], col = 'firebrick1')
+segments(x0 = 1:nrow(tab), y0 = CIs[1,ord], y1 = CIs[2,ord], col = 'pink3')
+```
+
+
+
+### Clean data for fitting
+```{r echo = FALSE}
+cleaned.dat = dat.002[which(!is.na(dat.002$prolonged.symp) & !is.na(dat.002$anyav)), ]
+
+# Group countries with 30 or fewer valid cases into "other"
+table(cleaned.dat$country)
+cleaned.dat$country[which(cleaned.dat$country %in% c('Austria', 'Portugal'))] = 'Other'
+which(is.na(cleaned.dat$prolonged.symp))
+which(is.na(cleaned.dat$anyvac))
+which(is.na(cleaned.dat$anyav))
+which(is.na(cleaned.dat$anydx))
+which(is.na(cleaned.dat$season))
+which(is.na(cleaned.dat$country))
+
+
+# Convert blocking variables to factors
+cleaned.dat$anyav = factor(cleaned.dat$anyav)
+cleaned.dat$anyvac = factor(cleaned.dat$anyvac)
+cleaned.dat$anydx = factor(cleaned.dat$anydx)
+cleaned.dat$country = factor(cleaned.dat$country)
+cleaned.dat$season = factor(cleaned.dat$season)
+cleaned.dat$challenge = factor(cleaned.dat$challenge)
+
+# Split into training and test data
+nrow(cleaned.dat)
+test.inds = sample(1:nrow(cleaned.dat), size = 84, replace = FALSE)
+train.dat = cleaned.dat[-test.inds, ]
+test.dat = cleaned.dat[test.inds, ]
+```
+
+
+
+
+
+
+### First fit a model where the only independent variable is age
+Treat vaccination, antivial use, underlying symptoms, country and season as blocking variables with fixed effects
+```{r}
+library(splines)
+library(ROCR)
+
+## Fit to country, season and medical history only (no effect of age or imprinting)
+fit0 = glm(prolonged.symp ~ anyav + anydx + country + season + challenge*anyvac, data = train.dat, family = binomial)
+summary(fit0)
+
+## Fit to age (with one knot at 65), plus the baseline factors, which include country, season and medical history only (no effect of age or imprinting)
+fit1 = glm(prolonged.symp ~ anyav + anydx + country + season + challenge*anyvac + ns(age, knots = 65), data = train.dat, family = binomial)
+summary(fit1)
+
+
+## H1N1 fit to age plus imprinting, plus fixed effects of vaccination, av use, underlying conditions, country and season
+fit2 = glm(prolonged.symp ~ ns(age, knots = 65)+protected_grp + anyav + anydx + country + season + challenge*anyvac, data = train.dat, family = binomial)
+summary(fit2)
+
+## Imprinting at H subtype level
+fit3 = glm(prolonged.symp ~ ns(age, knots = 65) + protected_sub + anyav + anydx + country + season + challenge*anyvac, data = train.dat, family = binomial)
+summary(fit3)
+
+## Imprinting at N subtype level
+fit4 = glm(prolonged.symp ~ ns(age, knots = 65) + protected_N + anyav + anydx + country + season + challenge*anyvac, data = train.dat, family = binomial)
+summary(fit4)
+
+
+
+## Plot the fits for each model side by side
+par(mfrow = c(1, 2), las = 3, mar = c(6, 6, 6, 3), cex.axis = .7)
+library(gam)
+plot.gam(fit0, se = T, col = 'darkslateblue', main = 'Baseline')
+plot.gam(fit1, se = T, col = 'darkslateblue', main = 'Baseline + age')
+plot.gam(fit2, se = T, col = 'darkslateblue', main = 'Baseline + age + imp')
+plot.gam(fit3, se = T, col = 'darkslateblue', main = 'Baseline + age + sub')
+plot.gam(fit4, se = T, col = 'darkslateblue', main = 'Baseline + age + N')
+pdf('002Duration_constrained.pdf')
+plot.gam(fit2, se = T, col = 'darkslateblue', main = 'Baseline + age + imp')
+dev.off()
+
+
+## Test performance on test data
+# Predict probs for each patient
+probs0 = predict(fit0, newdata = test.dat, type = 'response')
+probs1 = predict(fit1, newdata = test.dat, type = 'response')
+probs2 = predict(fit2, newdata = test.dat, 'response')
+probs3 = predict(fit3, newdata = test.dat, 'response')
+probs4 = predict(fit4, newdata = test.dat, 'response')
+
+# Create a predict object
+pr0 = prediction(probs0, test.dat$prolonged.symp)
+pr1 = prediction(probs1, test.dat$prolonged.symp)
+pr2 = prediction(probs2, test.dat$prolonged.symp)
+pr3 = prediction(probs3, test.dat$prolonged.symp)
+pr4 = prediction(probs4, test.dat$prolonged.symp)
+
+# Assess tp and fp
+prf0 = performance(pr0, measure = 'tpr', x.measure = 'fpr')
+prf1 = performance(pr1, measure = 'tpr', x.measure = 'fpr')
+prf2 = performance(pr2, measure = 'tpr', x.measure = 'fpr')
+prf3 = performance(pr3, measure = 'tpr', x.measure = 'fpr')
+prf4 = performance(pr4, measure = 'tpr', x.measure = 'fpr')
+
+# Calculate AUCs
+auc = sapply(list(pr0, pr1, pr2, pr3, pr4), FUN = function(xx){aa = performance(xx, measure = 'auc')
+                                                                      round(aa@y.values[[1]], 3) })
+
+# Plot AUC
+par(mfrow = c(1,1))
+plot(prf0, lwd = 2, col = cols[3])
+plot(prf1, col = cols[2], add = TRUE, lwd = 2)
+plot(prf2, col = cols[1], add = TRUE, lwd = 2)
+plot(prf3, col = 'limegreen', add = TRUE, lwd = 2)
+plot(prf4, col = 'magenta', add = TRUE, lwd = 2)
+abline(a = 0, b = 1, lty = 2)
+legend('bottomright', paste(c('baseline                  AUC = ', 'baseline+age          AUC = ', 'baseline+age+imp  AUC = ', 'baseline+age+sub  AUC =', 'baseline+age+N     AUC = '), auc), col = c(cols[3:1], 'limegreen', 'magenta'),  lty = 1)
+
+
+pdf('002Duration_AUC_constrained.pdf')
+par(lwd = 3.5, cex = 1.5, cex.axis = 1.5, cex.lab = 1.5)
+# Plot AUC
+par(mfrow = c(1,1))
+plot(prf0, lwd = 2, col = cols[3])
+plot(prf1, col = cols[2], add = TRUE, lwd = 2)
+plot(prf2, col = cols[1], add = TRUE, lwd = 2)
+plot(prf3, col = 'limegreen', add = TRUE, lwd = 2)
+plot(prf4, col = 'magenta', add = TRUE, lwd = 2)
+abline(a = 0, b = 1, lty = 2)
+legend('bottomright', paste(c('baseline                  AUC = ', 'baseline+age          AUC = ', 'baseline+age+imp  AUC = ', 'baseline+age+sub  AUC =', 'baseline+age+N     AUC = '), auc), col = c(cols[3:1], 'limegreen', 'magenta'),  lty = 1)
+dev.off()
+
+
+# Calculate AUC for test data
+AIC = c(fit0$aic, fit1$aic, fit2$aic, fit3$aic, fit4$aic); names(AIC) =  c('baseline', 'baseline+age', 'baseline+age+imp', 'baseline+age+sub', 'baseline+age+N')
+del.AIC = sort(AIC - min(AIC))
+del.AIC
+
+load('master.AIC.table.constrained.RData')
+master.AIC.table['002Prolonged', c('baseline', 'baseline+age', 'baseline+age+imp', 'baseline+age+sub', 'baseline+age+N')] = AIC - min(AIC)
+save(master.AIC.table, file = 'master.AIC.table.constrained.RData')
+rm(master.AIC.table)
+```
+
+

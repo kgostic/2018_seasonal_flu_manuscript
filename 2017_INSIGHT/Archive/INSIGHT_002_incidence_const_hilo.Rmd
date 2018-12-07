@@ -1,0 +1,325 @@
+---
+title: "002 incidence"
+author: "Katie Gostic"
+date: "11/1/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+setwd('~/Dropbox/R/2017_INSIGHT/')
+rm(list = ls())
+source('Import_FLU002.R')
+set.seed(43)
+cols = c("#4477AA", "#DDCC77", "#CC6677")
+cols = colors()[c(393, 464, 29)]
+cols = colors()[c(506, 499, 475)]
+#barplot(rep(1, 3), col = cols, pch = 16)
+```
+Notes on data formatting from Deborah Wentworth:
+
+* symdur is symptom duration (days) prior to enrollment
+* date info is for enrollment date
+* fluvac6 and fluvac12 are flu vaccination in last 6 or last 12 months
+* anyvac combines values from fluvac6 and fluvac12, whichever was collected for a given patient is reported.
+* anyav is use of antivirals at any time
+* anydx is any diagnosis in the medical history section
+* flutype is subtype: 1=H1N1, 2=H3N2, 3=flu B, 4=PCR negative, 5=Inf A, subtype unknown, and 6=coinfection with multiple strains
+* resolved is symptom resolution within 14 days
+* country code is the 3 letter code for country of enrollment - think the abbreviations will be obvious
+
+
+#### Visualize the relationship between age and symptoms >= 14d, given infection
+```{r warning = FALSE, echo = FALSE}
+valid = dat.002[!is.na(dat.002$H1N1), ]
+tab = table(valid$age, valid$H1N1)
+props = tab[,2]/rowSums(tab)
+CIs = sapply(X = 1:nrow(tab), FUN = function(ii){
+pp = prop.test(x = tab[ii, 2], n = sum(tab[ii,]))
+pp$conf.int[1:2]
+} )
+plot(as.numeric(rownames(tab)), props, ylim = c(0, 1), xlim = c(10, 100), xlab = 'age', ylab = 'prop infected', col = 'lightblue', pch = 16, main = 'H1N1: Observed prop. infected by age')
+points(as.numeric(rownames(tab)), props, col = 'dodgerblue')
+segments(x0 = as.numeric(rownames(tab)), y0 = CIs[1,], y1 = CIs[2,], col = 'lightblue')
+```
+
+
+
+#### Visualize the relationship between age and prob of H3N2 infection
+```{r warning = FALSE, echo = FALSE}
+valid = dat.002[!is.na(dat.002$H3N2), ]
+tab = table(valid$age, valid$H3N2)
+props = tab[,2]/rowSums(tab)
+CIs = sapply(X = 1:nrow(tab), FUN = function(ii){
+pp = prop.test(x = tab[ii, 2], n = sum(tab[ii,]))
+pp$conf.int[1:2]
+} )
+plot(as.numeric(rownames(tab)), props, ylim = c(0, 1), xlim = c(10, 100), xlab = 'age', ylab = 'prop infected', col = 'pink3', pch = 16, main = 'H3N2: Observed prop. infected by age')
+points(as.numeric(rownames(tab)), props, col = 'firebrick1')
+segments(x0 = as.numeric(rownames(tab)), y0 = CIs[1,], y1 = CIs[2,], col = 'pink3')
+```
+
+#### Visualize the relationship between country and prob infection
+
+H1N1
+```{r warning = FALSE, echo = FALSE}
+valid = dat.002[!is.na(dat.002$H1N1), ]
+tab = table(valid$country, valid$H1N1)
+props = tab[,2]/rowSums(tab)
+CIs = sapply(X = 1:nrow(tab), FUN = function(ii){
+pp = prop.test(x = tab[ii, 2], n = sum(tab[ii,]))
+pp$conf.int[1:2]
+} )
+ord = order(props)
+plot(1:nrow(tab), props[ord], ylim = c(0, 1), xlab = '', ylab = 'prop infected', col = 'lightblue', pch = 16, main = 'H1N1: Observed prop. infected by country', xaxt = 'n')
+axis(1, at = 1:nrow(tab), labels = rownames(tab)[ord], las = 3)
+points(1:nrow(tab), props[ord], col = 'dodgerblue')
+segments(x0 = 1:nrow(tab), y0 = CIs[1,ord], y1 = CIs[2,ord], col = 'lightblue')
+```
+
+H3N2
+```{r warning = FALSE, echo = FALSE}
+valid = dat.002[!is.na(dat.002$H3N2), ]
+tab = table(valid$country, valid$H3N2)
+props = tab[,2]/rowSums(tab)
+CIs = sapply(X = 1:nrow(tab), FUN = function(ii){
+pp = prop.test(x = tab[ii, 2], n = sum(tab[ii,]))
+pp$conf.int[1:2]
+} )
+ord = order(props)
+plot(1:nrow(tab), props[ord], ylim = c(0, 1), xlab = '', ylab = 'prop infected', col = 'pink3', pch = 16, main = 'H3N2: Observed prop. infected by country', xaxt = 'n')
+axis(1, at = 1:nrow(tab), labels = rownames(tab)[ord], las = 3)
+points(1:nrow(tab), props[ord], col = 'firebrick1')
+segments(x0 = 1:nrow(tab), y0 = CIs[1,ord], y1 = CIs[2,ord], col = 'pink3')
+```
+
+
+#### Visualize the relationship between season and prob infection
+
+H1N1
+```{r warning = FALSE, echo = FALSE}
+valid = dat.002[!is.na(dat.002$H1N1), ]
+tab = table(valid$season, valid$H1N1)[-16, ]
+props = tab[,2]/rowSums(tab)
+CIs = sapply(X = 1:nrow(tab), FUN = function(ii){
+pp = prop.test(x = tab[ii, 2], n = sum(tab[ii,]))
+pp$conf.int[1:2]
+} )
+#ord = order(props)
+ord = 1:nrow(tab)
+plot(1:nrow(tab), props[ord], ylim = c(0, 1), xlab = '', ylab = 'prop infected', col = 'lightblue', pch = 16, main = 'H1N1: Observed prop. infected by season', xaxt = 'n')
+axis(1, at = 1:nrow(tab), labels = rownames(tab)[ord], las = 3)
+points(1:nrow(tab), props[ord], col = 'dodgerblue')
+segments(x0 = 1:nrow(tab), y0 = CIs[1,ord], y1 = CIs[2,ord], col = 'lightblue')
+```
+
+H3N2
+```{r warning = FALSE, echo = FALSE}
+valid = dat.002[!is.na(dat.002$H3N2), ]
+tab = table(valid$season, valid$H3N2)[-16, ]
+props = tab[,2]/rowSums(tab)
+CIs = sapply(X = 1:nrow(tab), FUN = function(ii){
+pp = prop.test(x = tab[ii, 2], n = sum(tab[ii,]))
+pp$conf.int[1:2]
+} )
+#ord = order(props)
+ord = 1:nrow(tab)
+plot(1:nrow(tab), props[ord], ylim = c(0, 1), xlab = '', ylab = 'prop infected', col = 'pink3', pch = 16, main = 'H3N2: Observed prop. infected by age', xaxt = 'n')
+axis(1, at = 1:nrow(tab), labels = rownames(tab)[ord], las = 3)
+points(1:nrow(tab), props[ord], col = 'firebrick1')
+segments(x0 = 1:nrow(tab), y0 = CIs[1,ord], y1 = CIs[2,ord], col = 'pink3')
+```
+
+
+
+
+* age
+* imprinting status
+* vaccination status
+* antiviral use
+* season
+* country
+
+
+
+
+
+### Clean data for fitting
+```{r echo = FALSE}
+H1N1.model.dat = dat.002[which(!is.na(dat.002$H1N1) & !is.na(dat.002$anyav)), ]
+
+# Group countries with 30 or fewer valid cases into "other"
+table(H1N1.model.dat$country)
+H1N1.model.dat$country[which(H1N1.model.dat$country %in% c('Austria', 'Portugal'))] = 'Other'
+
+# Convert blocking variables to factors
+H1N1.model.dat$anyav = factor(H1N1.model.dat$anyav)
+H1N1.model.dat$anyvac = factor(H1N1.model.dat$anyvac)
+H1N1.model.dat$anydx = factor(H1N1.model.dat$anydx)
+H1N1.model.dat$country = factor(H1N1.model.dat$country)
+H1N1.model.dat$season = factor(H1N1.model.dat$season)
+
+# Split into training and test data
+nrow(H1N1.model.dat)
+test.inds = sample(1:nrow(H1N1.model.dat), size = 1000, replace = FALSE)
+train.H1N1 = H1N1.model.dat[-test.inds, ]
+test.H1N1 = H1N1.model.dat[test.inds, ]
+
+## Clean H3N2 data
+H3N2.model.dat = dat.002[which(!is.na(dat.002$H3N2) & !is.na(dat.002$anyav)), ]
+
+# Group countries with 30 or fewer valid cases into "other"
+table(H3N2.model.dat$country)
+H3N2.model.dat$country[which(H3N2.model.dat$country %in% c('Austria', 'Chile', 'Japan', 'Portugal'))] = 'Other'
+
+# Convert blocking variables to factors
+H3N2.model.dat$anyav = factor(H3N2.model.dat$anyav)
+H3N2.model.dat$anyvac = factor(H3N2.model.dat$anyvac)
+H3N2.model.dat$anydx = factor(H3N2.model.dat$anydx)
+H3N2.model.dat$country = factor(H3N2.model.dat$country)
+H3N2.model.dat$season = factor(H3N2.model.dat$season)
+
+# Split into training and test data
+nrow(H3N2.model.dat)
+test.inds = sample(1:nrow(H3N2.model.dat), size = 1000, replace = FALSE)
+train.H3N2 = H3N2.model.dat[-test.inds, ]
+test.H3N2 = H3N2.model.dat[test.inds, ]
+
+
+
+
+
+
+## Concatenate H3N2 and H1N1 data
+test = rbind(test.H1N1, test.H3N2)
+test$H1.valid = test$H3.valid = 0
+test$H1.valid[1:nrow(test.H1N1)] = 1
+test$H3.valid[(nrow(test.H1N1)+1):nrow(test)] = 1
+test$H1.valid = factor(test$H1.valid)
+test$H3.valid = factor(test$H3.valid)
+
+train = rbind(train.H1N1, train.H3N2)
+train$H1.valid = train$H3.valid = 0
+train$H1.valid[1:nrow(train.H1N1)] = 1
+train$H3.valid[(nrow(train.H1N1)+1):nrow(train)] = 1
+train$H1.valid = factor(train$H1.valid)
+train$H3.valid = factor(train$H3.valid)
+
+# Create a master outcome column
+test$infected = c(test.H1N1$H1N1, test.H3N2$H3N2)
+train$infected = c(train.H1N1$H1N1, train.H3N2$H3N2)
+
+
+# Creater master imp categofy
+train$imp.status = factor(c(train.H1N1$g1.category, train.H3N2$g2.category))
+test$imp.status = factor(c(test.H1N1$g1.category, test.H3N2$g2.category))
+
+## Remove anyone over age 65
+test = subset(test, age < 65)
+train = subset(train, age < 65)
+
+## Remove anyone without certain imprinting
+test = subset(test, imp.status != 'med')
+train = subset(train, imp.status != 'med')
+```
+
+
+
+
+
+
+### First fit a model where the only independent variable is age
+Treat vaccination, antivial use, underlying symptoms, country and season as blocking variables with fixed effects
+```{r}
+library(splines)
+library(ROCR)
+
+## Fit to country, season and medical history only (no effect of age or imprinting)
+fit0 = glm(infected ~ anyav + anydx + country + H3.valid*season + H3.valid*anyvac, data = train, family = binomial)
+summary(fit0)
+
+## H1N1 fit to age only, plus fixed effects of vaccination, av use, underlying conditions, country and season
+fit1 = glm(infected ~ anyav + anydx + country + age + H3.valid*season + H3.valid*anyvac, data = train, family = binomial)
+summary(fit1)
+
+
+## H1N1 fit to age plus imprinting, plus fixed effects of vaccination, av use, underlying conditions, country and season
+fit2 = glm(infected ~ anyav + anydx + country + age + imp.status + H3.valid*season + H3.valid*anyvac, data = train, family = binomial)
+summary(fit2)
+
+
+
+## Plot the fits for each model side by side
+par(mfrow = c(1, 2), las = 3, mar = c(6, 6, 6, 3), cex.axis = .7)
+library(gam)
+plot.gam(fit0, se = T, col = 'darkslateblue', main = 'Baseline')
+plot.gam(fit1, se = T, col = 'darkslateblue', main = 'Baseline + age')
+plot.gam(fit2, se = T, col = 'darkslateblue', main = 'Baseline + age + H.group.imp')
+# plot.gam(fit3, se = T, col = 'darkslateblue', main = 'Baseline + age + H.subtype.imp')
+# plot.gam(fit4, se = T, col = 'darkslateblue', main = 'Baseline + age + N.subtype.imp')
+pdf('002Incidence_constrained.pdf')
+plot.gam(fit2, se = T, col = 'darkslateblue', main = 'Baseline + age + imp')
+dev.off()
+
+
+## Test performance on test data
+# Predict probs for each patient
+probs0 = predict(fit0, newdata = test, type = 'response')
+probs1 = predict(fit1, newdata = test, type = 'response')
+probs2 = predict(fit2, newdata = test, type = 'response')
+# probs3 = predict(fit3, newdata = test, type = 'response')
+# probs4 = predict(fit4, newdata = test, type = 'response')
+
+# Create a predict object
+pr0 = prediction(probs0, test$infected)
+pr1 = prediction(probs1, test$infected)
+pr2 = prediction(probs2, test$infected)
+# pr3 = prediction(probs3, test$infected)
+# pr4 = prediction(probs4, test$infected)
+
+# Assess tp and fp
+prf0 = performance(pr0, measure = 'tpr', x.measure = 'fpr')
+prf1 = performance(pr1, measure = 'tpr', x.measure = 'fpr')
+prf2 = performance(pr2, measure = 'tpr', x.measure = 'fpr')
+# prf3 = performance(pr3, measure = 'tpr', x.measure = 'fpr')
+# prf4 = performance(pr4, measure = 'tpr', x.measure = 'fpr')
+
+# Calculate AUCs
+auc = sapply(list(pr0, pr1, pr2), FUN = function(xx){aa = performance(xx, measure = 'auc')
+                                                                      round(aa@y.values[[1]], 3) })
+
+# Plot AUC
+par(mfrow = c(1,1))
+plot(prf0, lwd = 2, col = cols[3])
+plot(prf1, col = cols[2], add = TRUE, lwd = 2)
+plot(prf2, col = cols[1], add = TRUE, lwd = 2)
+# plot(prf3, col = 'limegreen', add = TRUE, lwd = 2)
+# plot(prf4, col = 'magenta', add = TRUE, lwd = 2)
+abline(a = 0, b = 1, lty = 2)
+legend('bottomright', paste(c('baseline                  AUC = ', 'baseline+age          AUC = ', 'baseline+age+imp  AUC = ', 'baseline+age+sub  AUC =', 'baseline+age+N     AUC = '), auc), col = c(cols[3:1], 'limegreen', 'magenta'),  lty = 1)
+
+pdf('002Incidence_AUC_constrained.pdf')
+par(lwd = 3.5, cex = 1.5, cex.axis = 1.5, cex.lab = 1.5)
+# Plot AUC
+par(mfrow = c(1,1))
+plot(prf0, lwd = 2, col = cols[3])
+plot(prf1, col = cols[2], add = TRUE, lwd = 2)
+plot(prf2, col = cols[1], add = TRUE, lwd = 2)
+# plot(prf3, col = 'limegreen', add = TRUE, lwd = 2)
+# plot(prf4, col = 'magenta', add = TRUE, lwd = 2)
+abline(a = 0, b = 1, lty = 2)
+legend('bottomright', paste(c('baseline                  AUC = ', 'baseline+age          AUC = ', 'baseline+age+imp  AUC = ', 'baseline+age+sub  AUC =', 'baseline+age+N     AUC = '), auc), col = c(cols[3:1], 'limegreen', 'magenta'),  lty = 1)
+dev.off()
+
+
+# Calculate AUC for test data
+AIC = c(fit0$aic, fit1$aic, fit2$aic); names(AIC) =  c('baseline', 'baseline+age', 'baseline+age+imp')
+del.AIC = sort(AIC - min(AIC))
+del.AIC
+# 
+# load('master.AIC.table.constrained.RData')
+# master.AIC.table['002Incidence', c('baseline', 'baseline+age', 'baseline+age+imp', 'baseline+age+sub', 'baseline+age+N')] = AIC - min(AIC)
+# save(master.AIC.table, file = 'master.AIC.table.constrained.RData')
+# rm(master.AIC.table)
+```
+
+

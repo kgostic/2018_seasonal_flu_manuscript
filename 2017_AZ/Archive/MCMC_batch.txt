@@ -1,0 +1,12 @@
+Rscript MCMC_scripts/Hm_chain1.R &
+Rscript MCMC_scripts/Hm_chain2.R &
+Rscript MCMC_scripts/Hm_chain3.R &
+Rscript MCMC_scripts/Hm_H3_chain1.R &
+Rscript MCMC_scripts/Hm_H3_chain2.R &
+Rscript MCMC_scripts/Hm_H3_chain3.R &
+Rscript MCMC_scripts/OAS_H1_chain1.R &
+Rscript MCMC_scripts/OAS_H1_chain2.R &
+Rscript MCMC_scripts/OAS_H1_chain3.R &
+Rscript MCMC_scripts/OAS_H3_chain1.R &
+Rscript MCMC_scripts/OAS_H3_chain2.R &
+Rscript MCMC_scripts/OAS_H3_chain3.R &

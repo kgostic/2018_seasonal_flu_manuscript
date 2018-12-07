@@ -1,0 +1,543 @@
+---
+title: "INSIGHT_power_analysis"
+author: "Katie Gostic"
+date: "10/2/2017"
+output: html_document
+---
+
+# Power analysis of INSIGHT data
+Verify that the data is sufficiently powered for all proposed aims.
+
+# Logistic regression analyses
+Use a logistic regression model to predict the probability of severity outcome measures from FLU002 (hospitalization, symptoms > 14 days),  as a funciton of age and imprinting status.
+
+Note: In the full analysis we will consider other factors such as vaccination status and antiviral use, which may also influence the probability of hospitalization, or of symptoms > 14 days. But since these preliminary data do not include informaiton on case history, we omit these factors from the power analysis.
+
+#### Basic strategy:
+* Simulate data that aggrees with model assumptions. e.g., assume an individual's probabilitiy of hospitalization depends on age and imprinting status.
+* Draw a number of simulated data points from each age group that matches the number of observations in the FLU002 data.
+* Fit a logistic regression model to the drawn, simulated data and test whether the model is able to detect a significant relationship between imprinting and probability of hospitalization, given the available sample size and age distribution.
+
+
+# 1. Power analysis for effect of imprinting on probability of hospitalization
+
+##### Assumed relationship between age and probability of hospitalization
+Assume probability of hospitalization is roughly four times as high for adults in the 70+ age group, as for younger adults. This is consistent with patterns in the preliminary data:
+
+* H1N1: 3.72% of adults under age 70 hosptialized, vs 14.8% of adults over age 70 hospitalized
+* H3N2: 0.58% of adults under age 70 hospitalized, vs. 4.4% of adults over age 70 hospitalized
+```{r echo = TRUE, fig.height=3}
+plot(30:100, c(rep(1, 40), rep(4, 31)), ylim = c(0, 5), xlab = 'Age', ylab = 'Relative P(Hosp)', pch = 16, col = 'cadetblue', main = 'Assumed relationship between age and probability of hospitalization')
+
+```
+
+##### Estimated probability that each age group LACKS imprinting protection against the challenge strain
+In other words, what fraction of each age group imprinted to the opposite group in childhood? Individuals lacking protective childhood imrpinting are predicted to be at relatively high risk of severe disease and hospitalization.
+
+These estimates are based on a median year of case detection in 2013. Using the full data, I will be able to calculate these probabilities individually, for each patient, based on birth year, which will provide more power than in these preliminary analyses.
+
+```{r, echo = TRUE, fig.height=3.5, cache=TRUE}
+## Import imprinting reconstructions for USA
+load('../2017_seasonal_flu/Seasonal_group_weights.RData')
+# Keep only 2013 reconstructions
+wm.H1 = wm.H1['2013', ]
+wm.H3 = wm.H3['2013', ]
+wo.H1 = wo.H1['2013', ]
+wo.H3 = wo.H3['2013', ]
+# Write a function to bin age groups
+bin.age.gropus = function(imp.vec){
+  bin.starts = c(18, 30, 40, 50, 60 ,70)
+  bin.ends   = c(29, 39, 49, 59, 69, 99)
+  binned.averages = numeric(6)
+  for(ii in 1:6){
+    binned.averages[ii] = mean(imp.vec[as.character(bin.starts[ii]:bin.ends[ii])])
+  }
+  binned.averages
+}
+# Bin age groups
+wm.H1.binned = bin.age.gropus(wm.H1)
+wm.H3.binned = bin.age.gropus(wm.H3)
+wo.H1.binned = bin.age.gropus(wo.H1)
+wo.H3.binned = bin.age.gropus(wo.H3)
+# Plot in the same style as above
+plot(18:99, rep(wo.H1.binned, times = c(12, 10, 10, 10, 10, 30)), ylim = c(0, 1), xlab = 'Age', ylab = 'P(Unprotected by imprinting)', pch = 16, col = 'dodgerblue', main = 'Estimated fraction lacking H1N1 imprinting protection')
+#points(c(15, 35, 45, 55, 65, 80), c(2.9, 4.0, 2.4, 5.4, 8.2, 14.8))
+
+plot(18:99, rep(wo.H3.binned, times = c(12, 10, 10, 10, 10, 30)), ylim = c(0, 1), xlab = 'Age', ylab = 'P(Unprotected by imprinting)', pch = 16, col = 'firebrick2', main = 'Estimated fraction lacking H3N2 imprinting protection')
+#points(c(15, 35, 45, 55, 65, 80), c(.04, 1, 0, .7, 1.1, 4.4))
+```
+
+
+##### Assumed effects of imprinting on probability of hospitalization
+Small, medium and large effect sizes are shown.
+```{r, echo = TRUE, fig.height=4}
+# Set intercept parameter
+# Should give a probability of hospitalization around .035 for H1 and .005 for H3
+B0.H1 = -3.3
+no.protection.H1 = exp(B0.H1)/(1+exp(B0.H1)); #no.protection.H1 
+B0.H3 = -5.2
+no.protection.H3 = exp(B0.H3)/(1+exp(B0.H3)); #no.protection.H3
+
+# Set small, med and large effect sizes for imprinting
+#  Let X1 be the probability that an individual in age group m lacks imprinting protection
+#  Positive values of B1 indicate that the probability of hospitalization increases as the probability of lacking protection increases
+# Positive B1 values are expected
+B1.small = .6
+B1.med = 1.1
+B1.large = 1.6
+
+# Calculate expected probs
+calc.prob = function(b0, b1, x1){ exp(b0+b1*x1)/(1+exp(b0+b1*x1)) }
+par(mfrow = c(1, 3))
+small.H1 = calc.prob(B0.H1, B1.small, seq(0, 1, by = .1)); plot(seq(0, 1, by = .1), small.H1, xlab = 'P(unprotected by imprinting)', ylab = 'P(hospital)', ylim = c(0, .15), main = 'Small effect size, H1N1')
+med.H1 = calc.prob(B0.H1, B1.med, seq(0, 1, by = .1)); plot(seq(0, 1, by = .1), med.H1, xlab = 'P(unprotected by imprinting)', ylab = 'P(hospital)', ylim = c(0, .15), main = 'Medium effect size, H1N1')
+large.H1 = calc.prob(B0.H1, B1.large, seq(0, 1, by = .1)); plot(seq(0, 1, by = .1), large.H1, xlab = 'P(unprotected by imprinting)', ylab = 'P(hospital)', ylim = c(0, .15), main = 'Large effect size, H1N1')
+# Repeat for H3N2
+small.H3 = calc.prob(B0.H3, B1.small, seq(0, 1, by = .1)); plot(seq(0, 1, by = .1), small.H3, xlab = 'P(unprotected by imprinting)', ylab = 'P(hospital)', ylim = c(0, .05), main = 'Small effect size, H3N2')
+med.H3 = calc.prob(B0.H3, B1.med, seq(0, 1, by = .1)); plot(seq(0, 1, by = .1), med.H3, xlab = 'P(unprotected by imprinting)', ylab = 'P(hospital)', ylim = c(0, .05), main = 'Medium effect size, H3N2')
+large.H3 = calc.prob(B0.H3, B1.large, seq(0, 1, by = .1)); plot(seq(0, 1, by = .1), large.H3, xlab = 'P(unprotected by imprinting)', ylab = 'P(hospital)', ylim = c(0, .05), main = 'Large effect size, H3N2')
+```
+
+#### Simulate data and use the simulated data to fit a logistic regression model once
+Note: the coefficient on x1 describes imprinting effects. A positive estimate indicates that individuals who lack imprinting protection are at higher risk of hospitalization. A significant result indicates we have power to detect imprinting effects, given the available sample sizes and age distribution of observed cases.
+```{r, echo = TRUE}
+# Calc.prob is a function that calculates the probability of hospitalization based on age (x2) and imprinting status (x1)
+calc.prob = function(b0, b1, x1, b2, x2){ exp(b0+b1*x1+b2*x2)/(1+exp(b0+b1*x1+b2*x2)) }
+X1.H1 = rep(wo.H1.binned, times = c(12, 10, 10, 10, 10, 30))
+X1.H3 = rep(wo.H3.binned, times = c(12, 10, 10, 10, 10, 30))
+X2 = rep(c(0,1), times = c(52, 30))
+B2.H1 = 1.5
+B2.H3 = 1
+# Visualize probabilities across age groups
+#med.H3 = calc.prob(B0.H3, B1.med, x1.H3, b2 = B2.H3, X2)
+#plot(18:99, med.H3, xlab = 'Age', ylab = 'P(hospital)', ylim = c(0, .05), main = 'Medium effect size, H3N2')
+#med.H1 = calc.prob(B0.H1, B1.med, x1.H1, b2 = B2.H1, X2) 
+#plot(18:99, med.H1, xlab = 'Age', ylab = 'P(hospital)', ylim = c(0, .15), main = 'Medium effect size, H1N1')
+
+## H1N1 data
+no.pts.H1 = c(627, 526, 372, 260, 98, 27) # How many patients in each age group?
+bin.starts = c(18, 30, 40, 50, 60 ,70) # Define beginning and end of age bins
+bin.ends   = c(29, 39, 49, 59, 69, 99)
+# Expand vector of imprinting probabilities so that each entry represents a single age
+wo.H1.expanded = rep(wo.H1.binned, times = c(12, 10, 10, 10, 10, 30)); names(wo.H1.expanded) = 18:99
+# Draw patient ages, using the numbers of observations in each bin
+simulated.ages = unlist(sapply(1:6, function(xx) sample(x = bin.starts[xx]:bin.ends[xx], size = no.pts.H1[xx], replace = TRUE)))
+x1.in = wo.H1.expanded[as.character(simulated.ages)] # Prob that each patient lacks imprinting
+x2.in = as.numeric(simulated.ages >= 70) # Indicator - is the patient 70 or older?
+# Calculate individual probs of hospitalization, given these effect sizes
+pp.H1.small = calc.prob(b0 = B0.H1, b1 = B1.small, x1 = x1.in, b2 = B2.H1, x2 = x2.in)
+pp.H1.med = calc.prob(b0 = B0.H1, b1 = B1.med, x1 = x1.in, b2 = B2.H1, x2 = x2.in)
+pp.H1.large = calc.prob(b0 = B0.H1, b1 = B1.large, x1 = x1.in, b2 = B2.H1, x2 = x2.in)
+# For each simulated data set, use the predicted probabilities to perform bernoulli trials to simulate which patients were hospitalized
+h.status.small = sapply(pp.H1.small, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.med = sapply(pp.H1.med, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.large = sapply(pp.H1.large, function(pp) rbinom(n = 1, size = 1, prob = pp))
+# Summarize the simulated data
+summary.small = summary.med = summary.large = matrix(NA, 2, 6, dimnames = list(c(0, 1), paste(bin.starts, bin.ends, sep = '-')))
+for(ii in 1:6){
+  summary.small[1,ii] = sum(h.status.small == 0 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.small[2,ii] = sum(h.status.small == 1 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.med[1,ii] = sum(h.status.med == 0 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.med[2,ii] = sum(h.status.med == 1 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.large[1,ii] = sum(h.status.large == 0 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.large[2,ii] = sum(h.status.large == 1 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+}
+# Test whether a logistic regression returns a significant result:
+dat.in = data.frame(h.status.small, h.status.med, h.status.large, x1.in, x2.in, simulated.ages)
+print('Sample fit, H1N1, small effect size')
+small.fit = glm(h.status.small ~ x1.in, family = binomial); summary(small.fit)
+print('Sample fit, H1N1, medium effect size')
+med.fit = glm(h.status.med ~ x1.in, family = binomial); summary(med.fit)
+print('Sample fit, H1N1, large effect size')
+large.fit = glm(h.status.large ~ x1.in, family = binomial); summary(large.fit)
+
+
+## H3N2 data
+no.pts.H3 = c(496, 521, 422, 307, 178, 90) # How many patients in each age group?
+bin.starts = c(18, 30, 40, 50, 60 ,70) # Define beginning and end of age bins
+bin.ends   = c(29, 39, 49, 59, 69, 99)
+# Expand vector of imprinting probabilities so that each entry represents a single age
+wo.H3.expanded = rep(wo.H3.binned, times = c(12, 10, 10, 10, 10, 30)); names(wo.H3.expanded) = 18:99
+# Draw patient ages, using the numbers of observations in each bin
+simulated.ages = unlist(sapply(1:6, function(xx) sample(x = bin.starts[xx]:bin.ends[xx], size = no.pts.H3[xx], replace = TRUE)))
+x1.in = wo.H3.expanded[as.character(simulated.ages)] # Prob that each patient lacks imprinting
+x2.in = as.numeric(simulated.ages >= 70) # Indicator - is the patient 70 or older?
+# Calculate individual probs of hospitalization, given these effect sizes
+pp.H3.small = calc.prob(b0 = B0.H3, b1 = B1.small, x1 = x1.in, b2 = B2.H3, x2 = x2.in)
+pp.H3.med = calc.prob(b0 = B0.H3, b1 = B1.med, x1 = x1.in, b2 = B2.H3, x2 = x2.in)
+pp.H3.large = calc.prob(b0 = B0.H3, b1 = B1.large, x1 = x1.in, b2 = B2.H3, x2 = x2.in)
+# For each simulated data set, use the predicted probabilities to perform bernoulli trials to simulate which patients were hospitalized
+h.status.small = sapply(pp.H3.small, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.med = sapply(pp.H3.med, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.large = sapply(pp.H3.large, function(pp) rbinom(n = 1, size = 1, prob = pp))
+# Summarize the simulated data
+summary.small = summary.med = summary.large = matrix(NA, 2, 6, dimnames = list(c(0, 1), paste(bin.starts, bin.ends, sep = '-')))
+for(ii in 1:6){
+  summary.small[1,ii] = sum(h.status.small == 0 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.small[2,ii] = sum(h.status.small == 1 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.med[1,ii] = sum(h.status.med == 0 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.med[2,ii] = sum(h.status.med == 1 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.large[1,ii] = sum(h.status.large == 0 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.large[2,ii] = sum(h.status.large == 1 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+}
+# Test whether a logistic regression returns a significant result:
+dat.in = data.frame(h.status.small, h.status.med, h.status.large, x1.in, x2.in, simulated.ages)
+print('Sample fit, H3N2, small effect size')
+small.fit = glm(h.status.small ~ x1.in, family = binomial); summary(small.fit)
+print('Sample fit, H3N2, medium effect size')
+med.fit = glm(h.status.med ~ x1.in, family = binomial); summary(med.fit)
+print('Sample fit, H3N2, large effect size')
+large.fit = glm(h.status.large ~ x1.in, family = binomial); summary(large.fit)
+```
+## Simulate 1000 datasets, fit a logistic model to each, and then assess what fraction of times the imprinitng coefficient is significant
+The fraction of itmes the imprinting coefficient is significant at p = 0.05 is equivalent to power.
+#### Analysis using H1N1 parameters and sample sizes
+
+```{r, cache = TRUE, echo = TRUE}
+# H1N1 simulation
+no.pts.H1 = c(627, 526, 372, 260, 98, 27) # How many patients in each age group?
+bin.starts = c(18, 30, 40, 50, 60 ,70) # Define beginning and end of age bins
+bin.ends   = c(29, 39, 49, 59, 69, 99)
+# Expand vector of imprinting probabilities so that each entry represents a single age
+wo.H1.expanded = rep(wo.H1.binned, times = c(12, 10, 10, 10, 10, 30)); names(wo.H1.expanded) = 18:99
+# Initialize results matrix
+n.sims = 1000
+H1.pvals = matrix(NA, n.sims, 3, dimnames = list(NULL, c('small', 'med', 'large')))
+
+
+# Repeat 1000 times
+for(ii in 1:n.sims){
+# Draw patient ages, using the numbers of observations in each bin
+simulated.ages = unlist(sapply(1:6, function(xx) sample(x = bin.starts[xx]:bin.ends[xx], size = no.pts.H1[xx], replace = TRUE)))
+x1.in = wo.H1.expanded[as.character(simulated.ages)] # Prob that each patient lacks imprinting
+x2.in = as.numeric(simulated.ages >= 70) # Indicator - is the patient 70 or older?
+# Calculate individual probs of hospitalization, given these effect sizes
+pp.H1.small = calc.prob(b0 = B0.H1, b1 = B1.small, x1 = x1.in, b2 = B2.H1, x2 = x2.in)
+pp.H1.med = calc.prob(b0 = B0.H1, b1 = B1.med, x1 = x1.in, b2 = B2.H1, x2 = x2.in)
+pp.H1.large = calc.prob(b0 = B0.H1, b1 = B1.large, x1 = x1.in, b2 = B2.H1, x2 = x2.in)
+# For each simulated data set, use the predicted probabilities to perform bernoulli trials to simulate which patients were hospitalized
+h.status.small = sapply(pp.H1.small, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.med = sapply(pp.H1.med, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.large = sapply(pp.H1.large, function(pp) rbinom(n = 1, size = 1, prob = pp))
+# Test whether a logistic regression returns a significant result:
+dat.in = data.frame(h.status.small, h.status.med, h.status.large, x1.in, x2.in, simulated.ages)
+small.fit = glm(h.status.small ~ x1.in + x2.in, family = binomial)
+med.fit = glm(h.status.med ~ x1.in + x2.in, family = binomial)
+large.fit = glm(h.status.large ~ x1.in + x2.in, family = binomial)
+
+H1.pvals[ii, 1] = summary(small.fit)$coefficients['x1.in', 4]
+H1.pvals[ii, 2] = summary(med.fit)$coefficients['x1.in', 4]
+H1.pvals[ii, 3] = summary(large.fit)$coefficients['x1.in', 4]
+}
+```
+Power: what % of runs gave a significant result for small, med and large effect sizes?
+```{r, echo = TRUE}
+apply(H1.pvals, 2, function(xx) sum(xx <= 0.05))/n.sims
+```
+
+#### Analysis using H3N2 parameters and sample sizes
+
+```{r, cache = TRUE, echo = TRUE}
+no.pts.H3 = c(496, 521, 422, 307, 178, 90) # How many patients in each age group?
+bin.starts = c(18, 30, 40, 50, 60 ,70) # Define beginning and end of age bins
+bin.ends   = c(29, 39, 49, 59, 69, 99)
+# Expand vector of imprinting probabilities so that each entry represents a single age
+wo.H3.expanded = rep(wo.H3.binned, times = c(12, 10, 10, 10, 10, 30)); names(wo.H3.expanded) = 18:99
+# Initialize results matrix
+n.sims = 1000
+H3.pvals = matrix(NA, n.sims, 3, dimnames = list(NULL, c('small', 'med', 'large')))
+
+for(ii in 1:n.sims){
+# Draw patient ages, using the numbers of observations in each bin
+simulated.ages = unlist(sapply(1:6, function(xx) sample(x = bin.starts[xx]:bin.ends[xx], size = no.pts.H3[xx], replace = TRUE)))
+x1.in = wo.H3.expanded[as.character(simulated.ages)] # Prob that each patient lacks imprinting
+x2.in = as.numeric(simulated.ages >= 70) # Indicator - is the patient 70 or older?
+# Calculate individual probs of hospitalization, given these effect sizes
+pp.H3.small = calc.prob(b0 = B0.H3, b1 = B1.small, x1 = x1.in, b2 = B2.H3, x2 = x2.in)
+pp.H3.med = calc.prob(b0 = B0.H3, b1 = B1.med, x1 = x1.in, b2 = B2.H3, x2 = x2.in)
+pp.H3.large = calc.prob(b0 = B0.H3, b1 = B1.large, x1 = x1.in, b2 = B2.H3, x2 = x2.in)
+# For each simulated data set, use the predicted probabilities to perform bernoulli trials to simulate which patients were hospitalized
+h.status.small = sapply(pp.H3.small, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.med = sapply(pp.H3.med, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.large = sapply(pp.H3.large, function(pp) rbinom(n = 1, size = 1, prob = pp))
+# Test whether a logistic regression returns a significant result:
+dat.in = data.frame(h.status.small, h.status.med, h.status.large, x1.in, x2.in, simulated.ages)
+small.fit = glm(h.status.small ~ x1.in + x2.in, family = binomial)
+med.fit = glm(h.status.med ~ x1.in + x2.in, family = binomial)
+large.fit = glm(h.status.large ~ x1.in + x2.in, family = binomial)
+
+H3.pvals[ii, 1] = summary(small.fit)$coefficients['x1.in', 4]
+H3.pvals[ii, 2] = summary(med.fit)$coefficients['x1.in', 4]
+H3.pvals[ii, 3] = summary(large.fit)$coefficients['x1.in', 4]
+}
+```
+Power: what % of runs gave a significant result for small, med and large effect sizes?
+```{r, echo = TRUE}
+apply(H3.pvals, 2, function(xx) sum(xx <= 0.05))/n.sims
+```
+#### Conclusion: 
+These results suggest we have at least 80% power to detect a medium or large effect size of imprintnig in the H1N1 data, however, because there are so few H3N2 hospitalizations, we do not have 80% power to detect an effect of any size in the H3N2 data. Note, these power estimates are conservative, as the summary data is binned into large age groups. The final analysis will have additional power, as we will have knowledge of individual patient ages and birth years.
+
+
+
+
+
+
+
+# 2. Power analysis for effect of imprinting on probability that symptoms last >= 14 days
+
+##### Assumed relationship between age and probability of symptoms >=14 days
+Assume probability of symptoms >=14d is roughly equal for adults in the 70+ age group, and for younger adults. This goes against the conventional wisdowm that older adults are at high risk of severe infection, but the FLU002 summary data suggest the oldest patients are actually less likely to have symptoms after 14 days than younger adults:
+
+* H1N1: 14.8% of adults under age 70 had symptoms >= 14 days, vs 11.1% of adults over age 70 with symptoms >= 14d
+* H3N2: 12.6% of adults under age 70 had symptoms >= 14 days, vs. 10% of adults over age 70 with symptoms >= 14d
+```{r echo = TRUE, fig.height=3}
+plot(30:100, c(rep(1, 40), rep(1, 31)), ylim = c(0, 5), xlab = 'Age', ylab = 'Relative P(symp >= 14d)', pch = 16, col = 'cadetblue', main = 'Assumed relationship between age and probability of symptoms >=14d', cex.main = .8)
+```
+
+##### Estimated probability that each age group LACKS imprinting protection against the challenge strain
+Identical to the patterns shown above (probability of hospitalzation analysis).
+
+
+##### Assumed effects of imprinting on probability of symptoms >=14d
+Small, medium and large effect sizes are shown.
+```{r, echo = TRUE, fig.height=4}
+# Set intercept parameter
+# Should give a probability of symptoms >= 14d a bit lower than .15 for H1 and .13 for H3
+B0.H1 = -1.95
+no.protection.H1 = exp(B0.H1)/(1+exp(B0.H1))#; no.protection.H1 
+B0.H3 = -2.1
+no.protection.H3 = exp(B0.H3)/(1+exp(B0.H3))#; no.protection.H3
+
+# Set small, med and large effect sizes for imprinting
+#  Let X1 be the probability that an individual in age group m lacks imprinting protection
+#  Positive values of B1 indicate that the probability of symptoms >=14d increases as the probability of lacking protection increases
+# Positive B1 values are expected
+B1.small = .3
+B1.med = .7
+B1.large = 1.1
+
+# Calculate expected probs
+calc.prob = function(b0, b1, x1){ exp(b0+b1*x1)/(1+exp(b0+b1*x1)) }
+par(mfrow = c(1, 3))
+small.H1 = calc.prob(B0.H1, B1.small, seq(0, 1, by = .1)); plot(seq(0, 1, by = .1), small.H1, xlab = 'P(sypm >=14d)', ylab = 'P(hospital)', ylim = c(.13, .35), main = 'Small effect size, H1N1')
+med.H1 = calc.prob(B0.H1, B1.med, seq(0, 1, by = .1)); plot(seq(0, 1, by = .1), med.H1, xlab = 'P(sypm >=14d)', ylab = 'P(hospital)', ylim = c(.13, .35), main = 'Medium effect size, H1N1')
+large.H1 = calc.prob(B0.H1, B1.large, seq(0, 1, by = .1)); plot(seq(0, 1, by = .1), large.H1, xlab = 'P(sypm >=14d)', ylab = 'P(hospital)', ylim = c(.13, .32), main = 'Large effect size, H1N1')
+# Repeat for H3N2
+small.H3 = calc.prob(B0.H3, B1.small, seq(0, 1, by = .1)); plot(seq(0, 1, by = .1), small.H3, xlab = 'P(sypm >=14d)', ylab = 'P(hospital)', ylim = c(.11, .32), main = 'Small effect size, H3N2')
+med.H3 = calc.prob(B0.H3, B1.med, seq(0, 1, by = .1)); plot(seq(0, 1, by = .1), med.H3, xlab = 'P(sypm >=14d)', ylab = 'P(hospital)', ylim = c(.11, .35), main = 'Medium effect size, H3N2')
+large.H3 = calc.prob(B0.H3, B1.large, seq(0, 1, by = .1)); plot(seq(0, 1, by = .1), large.H3, xlab = 'P(sypm >=14d)', ylab = 'P(hospital)', ylim = c(.11, .32), main = 'Large effect size, H3N2')
+```
+
+#### Simulate data and use the simulated data to fit a logistic regression model once
+```{r, echo = TRUE}
+# Calc.prob is a function that calculates the probability of hospitalization based on imprinting status (x1)
+X1.H1 = rep(wo.H1.binned, times = c(12, 10, 10, 10, 10, 30))
+X1.H3 = rep(wo.H3.binned, times = c(12, 10, 10, 10, 10, 30))
+
+# Visualize probabilities across age groups
+# med.H3 = calc.prob(B0.H3, B1.med, X1.H3)
+# plot(18:99, med.H3, xlab = 'Age', ylab = 'P(hospital)', ylim = c(0, 1), main = 'Medium effect size, H3N2')
+# med.H1 = calc.prob(B0.H1, B1.med, X1.H1) 
+# plot(18:99, med.H1, xlab = 'Age', ylab = 'P(hospital)', ylim = c(0, 1), main = 'Medium effect size, H1N1')
+
+## H1N1 data
+no.pts.H1 = c(626, 524, 370, 259, 99, 27) # How many patients in each age group?
+bin.starts = c(18, 30, 40, 50, 60 ,70) # Define beginning and end of age bins
+bin.ends   = c(29, 39, 49, 59, 69, 99)
+# Expand vector of imprinting probabilities so that each entry represents a single age
+wo.H1.expanded = rep(wo.H1.binned, times = c(12, 10, 10, 10, 10, 30)); names(wo.H1.expanded) = 18:99
+# Draw patient ages, using the numbers of observations in each bin
+simulated.ages = unlist(sapply(1:6, function(xx) sample(x = bin.starts[xx]:bin.ends[xx], size = no.pts.H1[xx], replace = TRUE)))
+x1.in = wo.H1.expanded[as.character(simulated.ages)] # Prob that each patient lacks imprinting
+x2.in = as.numeric(simulated.ages >= 70) # Indicator - is the patient 70 or older?
+# Calculate individual probs of hospitalization, given these effect sizes
+pp.H1.small = calc.prob(b0 = B0.H1, b1 = B1.small, x1 = x1.in)
+pp.H1.med = calc.prob(b0 = B0.H1, b1 = B1.med, x1 = x1.in)
+pp.H1.large = calc.prob(b0 = B0.H1, b1 = B1.large, x1 = x1.in)
+# For each simulated data set, use the predicted probabilities to perform bernoulli trials to simulate which patients were hospitalized
+h.status.small = sapply(pp.H1.small, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.med = sapply(pp.H1.med, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.large = sapply(pp.H1.large, function(pp) rbinom(n = 1, size = 1, prob = pp))
+# Summarize the simulated data
+summary.small = summary.med = summary.large = matrix(NA, 2, 6, dimnames = list(c(0, 1), paste(bin.starts, bin.ends, sep = '-')))
+for(ii in 1:6){
+  summary.small[1,ii] = sum(h.status.small == 0 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.small[2,ii] = sum(h.status.small == 1 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.med[1,ii] = sum(h.status.med == 0 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.med[2,ii] = sum(h.status.med == 1 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.large[1,ii] = sum(h.status.large == 0 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.large[2,ii] = sum(h.status.large == 1 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+}
+# summary.small
+# summary.med
+# summary.large
+# Test whether a logistic regression returns a significant result:
+dat.in = data.frame(h.status.small, h.status.med, h.status.large, x1.in, simulated.ages)
+print('Sample fit, H1N1, small effect size')
+small.fit = glm(h.status.small ~ x1.in, family = binomial); summary(small.fit)
+print('Sample fit, H1N1, medium effect size')
+med.fit = glm(h.status.med ~ x1.in, family = binomial); summary(med.fit)
+print('Sample fit, H1N1, large effect size')
+large.fit = glm(h.status.large ~ x1.in, family = binomial); summary(large.fit)
+
+
+## H3N2 data
+no.pts.H3 = c(497, 518, 422, 307, 178, 90) # How many patients in each age group?
+bin.starts = c(18, 30, 40, 50, 60 ,70) # Define beginning and end of age bins
+bin.ends   = c(29, 39, 49, 59, 69, 99)
+# Expand vector of imprinting probabilities so that each entry represents a single age
+wo.H3.expanded = rep(wo.H3.binned, times = c(12, 10, 10, 10, 10, 30)); names(wo.H3.expanded) = 18:99
+# Draw patient ages, using the numbers of observations in each bin
+simulated.ages = unlist(sapply(1:6, function(xx) sample(x = bin.starts[xx]:bin.ends[xx], size = no.pts.H3[xx], replace = TRUE)))
+x1.in = wo.H3.expanded[as.character(simulated.ages)] # Prob that each patient lacks imprinting
+x2.in = as.numeric(simulated.ages >= 70) # Indicator - is the patient 70 or older?
+# Calculate individual probs of hospitalization, given these effect sizes
+pp.H3.small = calc.prob(b0 = B0.H3, b1 = B1.small, x1 = x1.in)
+pp.H3.med = calc.prob(b0 = B0.H3, b1 = B1.med, x1 = x1.in)
+pp.H3.large = calc.prob(b0 = B0.H3, b1 = B1.large, x1 = x1.in)
+# For each simulated data set, use the predicted probabilities to perform bernoulli trials to simulate which patients were hospitalized
+h.status.small = sapply(pp.H3.small, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.med = sapply(pp.H3.med, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.large = sapply(pp.H3.large, function(pp) rbinom(n = 1, size = 1, prob = pp))
+# Summarize the simulated data
+summary.small = summary.med = summary.large = matrix(NA, 2, 6, dimnames = list(c(0, 1), paste(bin.starts, bin.ends, sep = '-')))
+for(ii in 1:6){
+  summary.small[1,ii] = sum(h.status.small == 0 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.small[2,ii] = sum(h.status.small == 1 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.med[1,ii] = sum(h.status.med == 0 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.med[2,ii] = sum(h.status.med == 1 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.large[1,ii] = sum(h.status.large == 0 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+  summary.large[2,ii] = sum(h.status.large == 1 & simulated.ages >= bin.starts[ii] & simulated.ages <= bin.ends[ii])
+}
+# summary.small
+# summary.med
+# summary.large
+# Test whether a logistic regression returns a significant result:
+dat.in = data.frame(h.status.small, h.status.med, h.status.large, x1.in, simulated.ages)
+print('Sample fit, H3N2, small effect size')
+small.fit = glm(h.status.small ~ x1.in, family = binomial); summary(small.fit)
+print('Sample fit, H3N2, medium effect size')
+med.fit = glm(h.status.med ~ x1.in, family = binomial); summary(med.fit)
+print('Sample fit, H3N2, large effect size')
+large.fit = glm(h.status.large ~ x1.in, family = binomial); summary(large.fit)
+```
+### Simulate 1000 datasets, fit a logistic model to each, and then count the number of times the imprinitng coefficient is significant
+
+#### Analysis using H1N1 parameters and sample sizes
+
+```{r, cache = TRUE, echo = TRUE}
+## H1N1 data
+no.pts.H1 = c(626, 524, 370, 259, 99, 27) # How many patients in each age group?
+bin.starts = c(18, 30, 40, 50, 60 ,70) # Define beginning and end of age bins
+bin.ends   = c(29, 39, 49, 59, 69, 99)
+# Expand vector of imprinting probabilities so that each entry represents a single age
+wo.H1.expanded = rep(wo.H1.binned, times = c(12, 10, 10, 10, 10, 30)); names(wo.H1.expanded) = 18:99
+# Initialize results matrix
+n.sims = 1000
+H1.pvals = matrix(NA, n.sims, 3, dimnames = list(NULL, c('small', 'med', 'large')))
+
+
+# Repeat 1000 times
+for(ii in 1:n.sims){
+# Draw patient ages, using the numbers of observations in each bin
+simulated.ages = unlist(sapply(1:6, function(xx) sample(x = bin.starts[xx]:bin.ends[xx], size = no.pts.H1[xx], replace = TRUE)))
+x1.in = wo.H1.expanded[as.character(simulated.ages)] # Prob that each patient lacks imprinting
+x2.in = as.numeric(simulated.ages >= 70) # Indicator - is the patient 70 or older?
+# Calculate individual probs of hospitalization, given these effect sizes
+pp.H1.small = calc.prob(b0 = B0.H1, b1 = B1.small, x1 = x1.in)
+pp.H1.med = calc.prob(b0 = B0.H1, b1 = B1.med, x1 = x1.in)
+pp.H1.large = calc.prob(b0 = B0.H1, b1 = B1.large, x1 = x1.in)
+# For each simulated data set, use the predicted probabilities to perform bernoulli trials to simulate which patients were hospitalized
+h.status.small = sapply(pp.H1.small, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.med = sapply(pp.H1.med, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.large = sapply(pp.H1.large, function(pp) rbinom(n = 1, size = 1, prob = pp))
+# Expand vector of imprinting probabilities so that each entry represents a single age
+# Test whether a logistic regression returns a significant result:
+dat.in = data.frame(h.status.small, h.status.med, h.status.large, x1.in, simulated.ages)
+small.fit = glm(h.status.small ~ x1.in, family = binomial)
+med.fit = glm(h.status.med ~ x1.in, family = binomial)
+large.fit = glm(h.status.large ~ x1.in, family = binomial)
+
+H1.pvals[ii, 1] = summary(small.fit)$coefficients['x1.in', 4]
+H1.pvals[ii, 2] = summary(med.fit)$coefficients['x1.in', 4]
+H1.pvals[ii, 3] = summary(large.fit)$coefficients['x1.in', 4]
+}
+```
+Power: what % of runs gave a significant result for small, med and large effect sizes?
+```{r, echo = TRUE}
+apply(H1.pvals, 2, function(xx) sum(xx <= 0.05))/n.sims
+```
+
+
+#### Analysis using H3N2 parameters and sample sizes
+
+```{r, cache = TRUE, echo = TRUE}
+## H3N2 data
+no.pts.H3 = c(497, 518, 422, 307, 178, 90) # How many patients in each age group?
+bin.starts = c(18, 30, 40, 50, 60 ,70) # Define beginning and end of age bins
+bin.ends   = c(29, 39, 49, 59, 69, 99)
+# Expand vector of imprinting probabilities so that each entry represents a single age
+wo.H3.expanded = rep(wo.H3.binned, times = c(12, 10, 10, 10, 10, 30)); names(wo.H3.expanded) = 18:99
+# Initialize results matrix
+n.sims = 1000
+H3.pvals = matrix(NA, n.sims, 3, dimnames = list(NULL, c('small', 'med', 'large')))
+
+for(ii in 1:n.sims){
+# Draw patient ages, using the numbers of observations in each bin
+simulated.ages = unlist(sapply(1:6, function(xx) sample(x = bin.starts[xx]:bin.ends[xx], size = no.pts.H3[xx], replace = TRUE)))
+x1.in = wo.H3.expanded[as.character(simulated.ages)] # Prob that each patient lacks imprinting
+x2.in = as.numeric(simulated.ages >= 70) # Indicator - is the patient 70 or older?
+# Calculate individual probs of hospitalization, given these effect sizes
+pp.H3.small = calc.prob(b0 = B0.H3, b1 = B1.small, x1 = x1.in)
+pp.H3.med = calc.prob(b0 = B0.H3, b1 = B1.med, x1 = x1.in)
+pp.H3.large = calc.prob(b0 = B0.H3, b1 = B1.large, x1 = x1.in)
+# For each simulated data set, use the predicted probabilities to perform bernoulli trials to simulate which patients were hospitalized
+h.status.small = sapply(pp.H3.small, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.med = sapply(pp.H3.med, function(pp) rbinom(n = 1, size = 1, prob = pp))
+h.status.large = sapply(pp.H3.large, function(pp) rbinom(n = 1, size = 1, prob = pp))
+# Test whether a logistic regression returns a significant result:
+dat.in = data.frame(h.status.small, h.status.med, h.status.large, x1.in, x2.in, simulated.ages)
+small.fit = glm(h.status.small ~ x1.in, family = binomial)
+med.fit = glm(h.status.med ~ x1.in, family = binomial)
+large.fit = glm(h.status.large ~ x1.in, family = binomial)
+
+H3.pvals[ii, 1] = summary(small.fit)$coefficients['x1.in', 4]
+H3.pvals[ii, 2] = summary(med.fit)$coefficients['x1.in', 4]
+H3.pvals[ii, 3] = summary(large.fit)$coefficients['x1.in', 4]
+}
+```
+Power: what % of runs gave a significant result for small, med and large effect sizes?
+```{r, echo = TRUE}
+apply(H3.pvals, 2, function(xx) sum(xx <= 0.05))/n.sims
+```
+#### Conclusion: Given the available sample sizes, we should have at least 88% power to detect an effect of imprinting for medium and large effect sizes. Small effect sizes may not be detected (<80% power).
+
+
+
+# FLU003 birth year distributions
+The provided summary data contain information on age and birth year distributions, but not on outcome measures. Thus, I can't do logistic regression power analyses for FLU003, but I can do some preliminary analyses on observed distributions of H1N1 and H3N2 across birth years.
+
+The general prediction based on HA imprinting patterns is that those born before 1968 will have imprinting protection agaisnt group 1 (H1N1), whereas those born after 1968 are more likely to have imprinting protection against group 2 (H3N2). Thus, if we compare the age distributions of H1N1 vs. H3N2 cases in the FLU003 study (where all cases are severe enough to be hospitalized), we should expect to see a greater fraction of severe H3N2 cases in pre-1968 birth than H1N1 cases in pre-1968 birth years.  
+```{r, echo = TRUE}
+by.dist = read.csv('~/Dropbox/R/INSIGHT/FLU003_birthyear.csv')
+by.table = matrix(NA, 2, 2, dimnames = list(c('H1N1', 'H3N2'), c('post.1968', 'pre.1968'))) # Empty matrix
+by.table[1,1] = sum(subset(x = by.dist, BirthYear >= 1968, select = H1N1))
+by.table[2,1] = sum(subset(x = by.dist, BirthYear >= 1968, select = H3N2))
+by.table[1,2] = sum(subset(x = by.dist, BirthYear < 1968, select = H1N1))
+by.table[2,2] = sum(subset(x = by.dist, BirthYear < 1968, select = H3N2))
+test = chisq.test(by.table)
+print('Proportion of H1N1 or H3N2 cases in pre- and post-1968 birth years')
+prop.table(by.table, 1)
+print('Observed counts')
+by.table
+print('Expected counts if birth year distribution is independent of subtype')
+test$expected
+print('Observed - expected')
+by.table-test$expected
+test
+```
+#### Conclusions:
+A chi square test indicates that differences in the birth year distributions are not independent of subtype. Rather, as expected, based on imprining, we see a greater proprtion of H3N2 cases in pre-1968 birth cohorts than H1N1 cases.
+
+The proposed analyses of INSIGHT data will explore these patterns in greater detail, considering the effect of several variables (age, imprinting status, vaccination status, antivial use), and assessing several severity outcome measures.

@@ -1,0 +1,84 @@
+---
+title: "AZ Severity Data"
+author: "Katie Gostic"
+date: "9/25/2017"
+---
+
+
+Load the full data set
+```{r}
+rm(list = ls())
+setwd('~/Dropbox/R/2017_seasonal_flu/')
+raw.data = read.csv('AZ_2016_Hospitalization.csv')
+raw.data$admitted = as.numeric(raw.data$day_admit != '0: no admit') # Indicator variable for admitted patients
+```
+
+
+Run a GAMM to predict probabilities of hospital admission. Explanatory factors are age and birth year.
+Alternatively, could try age and imprinting probability
+```{r}
+library(splines)
+gam.1 = glm(admitted~ns(BYEAR ,4)+ns(2016-BYEAR, 4), data = raw.data, family = binomial)
+gam.2 = glm(admitted~ns(2016-BYEAR, 4), data = raw.data, family = binomial)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Check whether the pattern holds for 1957 hospital admissions
+Expect a lower proportion of H1N1 cases than H3N2 to occur in pre-1957 cohorts
+```{r}
+admit.table = wk.table*0; colnames(admit.table) = c('pre.1957', 'post.1957')
+admit.table[1, 1] = nrow(subset(raw.data, admitted == 1 & MORBSPC == 'A/H1N1 (SWINE-ORIGIN)' & BYEAR < 1957))
+admit.table[2, 1] = nrow(subset(raw.data, admitted == 1 & MORBSPC == 'A/H3' & BYEAR < 1957))
+admit.table[1, 2] = nrow(subset(raw.data, admitted == 1 & MORBSPC == 'A/H1N1 (SWINE-ORIGIN)' & BYEAR >= 1957))
+admit.table[2, 2] = nrow(subset(raw.data, admitted == 1 & MORBSPC == 'A/H3' & BYEAR >= 1957))
+# Expect a higher fraction of H3N2 admits in the pre-1957 cohort than H1N1
+prop.table(admit.table, 1)
+c.test = chisq.test(admit.table)
+c.test
+c.test$expected
+```
+
+
+```{r echo = FALSE}
+icu.table = wk.table*0; colnames(icu.table) = c('pre.1957', 'post.1957')
+icu.table[1, 1] = nrow(subset(raw.data, ICU == 1 & MORBSPC == 'A/H1N1 (SWINE-ORIGIN)' & BYEAR < 1957))
+icu.table[2, 1] = nrow(subset(raw.data, ICU == 1 & MORBSPC == 'A/H3' & BYEAR < 1957))
+icu.table[1, 2] = nrow(subset(raw.data, ICU == 1 & MORBSPC == 'A/H1N1 (SWINE-ORIGIN)' & BYEAR >= 1957))
+icu.table[2, 2] = nrow(subset(raw.data, ICU == 1 & MORBSPC == 'A/H3' & BYEAR >= 1957))
+# Expect a higher fraction of H3N2 admits in the pre-1957 cohort than H1N1
+icu.table
+prop.table(icu.table, 1)
+c.test = chisq.test(icu.table)
+c.test
+c.test$expected
+icu.table-c.test$expected
+```
+
+Repeat for 1968 break
+```{r echo = FALSE}
+icu.table = wk.table*0; colnames(icu.table) = c('pre.1968', 'post.1968')
+icu.table[1, 1] = nrow(subset(raw.data, ICU == 1 & MORBSPC == 'A/H1N1 (SWINE-ORIGIN)' & BYEAR < 1968))
+icu.table[2, 1] = nrow(subset(raw.data, ICU == 1 & MORBSPC == 'A/H3' & BYEAR < 1968))
+icu.table[1, 2] = nrow(subset(raw.data, ICU == 1 & MORBSPC == 'A/H1N1 (SWINE-ORIGIN)' & BYEAR >= 1968))
+icu.table[2, 2] = nrow(subset(raw.data, ICU == 1 & MORBSPC == 'A/H3' & BYEAR >= 1968))
+# Expect a higher fraction of H3N2 admits in the pre-1957 cohort than H1N1
+icu.table
+prop.table(icu.table, 1)
+c.test = chisq.test(icu.table)
+c.test
+c.test$expected
+icu.table-c.test$expected
+```
