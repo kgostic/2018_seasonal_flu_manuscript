@@ -1,13 +1,15 @@
 ## Model comparison for INSIGHT FLU002
 ##  Fit multinomial models containing all possible combinations of imprinting hypotheses and medical history
 ##  Use AIC to compare model fits
+##  ONLY FIT TO DATA FROM SEASONS IN WHICH BOTH SUBTYPES CO CIRCULATED
+##  FIT A SEPARATE AGE SPLINE IN EACH SEASON
 
 #######################################
 ## Setup and import data
 ######################################
 rm(list = ls())
-source('00-Import_FLU002_-for-multinomial.R') ## Model inputs
-source('0func-multinomial_likelihood.R') ## Likelihood function
+source('00-Import_FLU002_-for-multinomial_ssn_specific.R') ## Model inputs
+source('0func-likelihood_ssn_specific.R') ## Likelihood function
 
 ## Test likelihood optimization
 # # Maximal model
@@ -16,12 +18,12 @@ source('0func-multinomial_likelihood.R') ## Likelihood function
 ## pro.H3 - master protection matrix relevant to H3N2 protection
 ## lower.in - vector of lower limits for estimated free par values. Order: rAv, rDX, rVS, rpro.H1, rpro.H3
 ## upper.in - upper limits for estimated free par values
-nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rVX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(.001, .001, 1, 1, .001, .001, .001, .001), upper = c(3, 3, 10, 10, 1, 1, 1, 1))
+nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rVX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(.001), upper = c(5,5,1,1,1))
 
 
 ## You can exclude factors from the model by excluding their paramter names from the pars.in vector. This signals the wrapper to substitute the null relative risk value (1), which effectively removes the factor from the model.
 ## Reduced model, vaccination and imprinting only
-nll.wrapper(pars.in = c('rVX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(.001, .001, .001, .001), upper = c(1, 1, 1, 1))
+nll.wrapper(pars.in = c('rVX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(.001, .001, .001), upper = c(1, 1, 1))
 
 
 
@@ -188,7 +190,7 @@ rr = function(center, width = 1, height = 1, col.in = 'navy'){
 
 
 
-pdf('INSIGHT_AIC.pdf', width = 4)
+#pdf('INSIGHT_AIC.pdf', width = 4)
 plot.new()
 plot.window(xlim = c(0.5, 7.5), ylim = c(0.5, 32.5))
 axis(2, at = 1:32, labels = gsub(pattern = 'lk.(\\w+)',replacement = "\\1", names(mods)), las = 2)
