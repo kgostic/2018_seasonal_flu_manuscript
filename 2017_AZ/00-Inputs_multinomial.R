@@ -1,3 +1,8 @@
+## This script imports raw data from AZ surveillance
+## Script formats data for input into multinomial likelihood
+## Also loads relevant probabilities of imprinting, and formats thses for input into likelihood
+## Also generates age-specific indicators, which we use inside the likelihood to fit age specific step functions
+
 ## Load Arizona data
 raw.dat = read.csv('raw-data/AZ_flu_surveillance_93-94.csv')
 raw.dat = rbind(raw.dat, read.csv('raw-data/AZ_flu_surveillance_94-95.csv'))
@@ -18,15 +23,11 @@ raw.dat = rbind(raw.dat, read.csv('raw-data/AZ_flu_surveillance_14-15.csv'))
 raw.dat = raw.dat[-364, ]
 
 
-## Calculate age
+
 names(raw.dat) = c('season', 'birthyear', 'subtype')
 ## Exclude cases born before 1918 (imprinting history not known, and there are few cases)
 raw.dat = raw.dat[-which(raw.dat$birthyear < 1918), ]
-raw.dat$year1 = as.numeric(gsub(pattern = '(\\d\\d\\d\\d)\\d\\d', replacement = "\\1", x = raw.dat$season))
-raw.dat$year2 = raw.dat$year1 + 1
-raw.dat$age = raw.dat$year2 - raw.dat$birthyear
-
-write.csv(raw.dat, file = '../Data/processed_data/AZ_seasonal_linelist.csv', row.names = FALSE)
+write.csv(raw.dat, file = 'processed-data/AZ_seasonal_linelist.csv', row.names = FALSE)
 
 ## Tabluate the number of H1 and H3 cases in each birth year where cases were observed
 ssns = unique(raw.dat$season)
@@ -45,19 +46,27 @@ for(ss in ssns){
 
 
 ## Reconstruct imprinting patterns
-# setwd('../Reconstructions/')
+## Commented code was used to generate reconstructions
+## Instead of re-running this code each time, we can just load the saved outputs
+## Commented code is provided for reproducibility
+# setwd('../../Reconstructions/')
 # source('01-reconstruct-imprinting-histories.R')
 # weights = get.weights.master(years.out = c(1994, 1995, 2003:2015), Countries.out = 'USA', region.in = c('default'))
 # save(weights, file = paste('AZ_weights_', Sys.Date(), '.RData', sep = ''))
-setwd('../2017_seasonal_flu/')
-load('../Reconstructions/AZ_weights_2018-11-29.RData')
+# setwd('../2018_seasonal_flu/2017_AZ/')
+load('../../Reconstructions/AZ_weights_2018-11-29.RData')
 ## Extract relevant protection status from weights outputs.
-proH1.master = weights[[1]][,as.character(2015:1918)]
-proH3.master = weights[[3]][,as.character(2015:1918)]
-prog1.master = weights[[1]][,as.character(2015:1918)]+weights[[2]][,as.character(2015:1918)]
-prog2.master = proH3.master
-proN1.master = proH1.master
-proN2.master = weights[[2]][,as.character(2015:1918)]+weights[[3]][,as.character(2015:1918)]
+## Loaded variable is called weights, and is a list of length 4
+## weights[[1]] gives probabilities of childhood imptinting to H1N1
+## weights[[2]] gives probabilities of imprinting to H2N2
+## weights[[3]] gives probs of H3N2 imrinting
+## weights[[4]] gives probabilities of remaining naive. This only takes non-zero probabilities in cohorts under age 13.
+proH1.master = weights[[1]][,as.character(2015:1918)] # Individuals who imprinted to H1N1 will be protected against H1N1 at the HA subtype level
+proH3.master = weights[[3]][,as.character(2015:1918)] # Individuals who imprinted to H3N2 will be protected against H3N2 at the HA subtype level
+prog1.master = weights[[1]][,as.character(2015:1918)]+weights[[2]][,as.character(2015:1918)] # Individuals who imprinted to H1N1 OR H2N2 will be protected against H1N1 at the HA group level
+prog2.master = proH3.master # Individuals who imprinted to H3N2 will be protected against H3N2 at the HA group level
+proN1.master = proH1.master # Individuals who imprinted to H1N1 will be protected against H1N1 at the NA subtype level
+proN2.master = weights[[2]][,as.character(2015:1918)]+weights[[3]][,as.character(2015:1918)] # Individuals who imprinted to H2N2 or H3N2 will be protected against H3N2 at the NA subtype level
 
 
 
