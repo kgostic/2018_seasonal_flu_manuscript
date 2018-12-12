@@ -9,6 +9,10 @@ rm(list = ls())
 source('00-Import_FLU002_-for-multinomial.R') ## Model inputs
 source('0func-multinomial_likelihood.R') ## Likelihood function
 
+
+## OUTPUTS
+outfile1 = 'processed-data/fitted_models.RData'
+
 ## Test likelihood optimization
 # # Maximal model
 ## pars.in gives a vector of initial guesses for free paramters. Must be a nmed vector.
@@ -47,100 +51,100 @@ pro.low = 0.001; pro.high = 1 ## Protection should only decrease risk. Prohibit 
 # N = neuraminidase
 
 ## 1. TUVG 
-lk.TUVG = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(av.low, dx.low, vx.low, vx.low, pro.low, pro.low), upper = c(av.high, dx.high, vx.high, vx.high, pro.high, pro.high)); lk.TUVG
+lk.ATUVG = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(av.low, dx.low, vx.low, vx.low, pro.low, pro.low), upper = c(av.high, dx.high, vx.high, vx.high, pro.high, pro.high)); lk.ATUVG
 
 ## 2. TUVS
-lk.TUVS = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(av.low, dx.low, vx.low, vx.low, pro.low, pro.low), upper = c(av.high, dx.high, vx.high, vx.high, pro.high, pro.high)); lk.TUVS
+lk.ATUVS = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(av.low, dx.low, vx.low, vx.low, pro.low, pro.low), upper = c(av.high, dx.high, vx.high, vx.high, pro.high, pro.high)); lk.ATUVS
 
 ## 3. TUVN
-lk.TUVN = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(av.low, dx.low, vx.low, vx.low, pro.low, pro.low), upper = c(av.high, dx.high, vx.high, vx.high, pro.high, pro.high)); lk.TUVN
+lk.ATUVN = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(av.low, dx.low, vx.low, vx.low, pro.low, pro.low), upper = c(av.high, dx.high, vx.high, vx.high, pro.high, pro.high)); lk.ATUVN
 
 ## 4. TUV
-lk.TUV = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(av.low, dx.low, vx.low, vx.low), upper = c(av.high, dx.high, vx.high, vx.high)); lk.TUV
+lk.ATUV = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(av.low, dx.low, vx.low, vx.low), upper = c(av.high, dx.high, vx.high, vx.high)); lk.ATUV
 
 ## 5. TUG 
-lk.TUG = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(av.low, dx.low, pro.low, pro.low), upper = c(av.high, dx.high, pro.high, pro.high)); lk.TUG
+lk.ATUG = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(av.low, dx.low, pro.low, pro.low), upper = c(av.high, dx.high, pro.high, pro.high)); lk.ATUG
 
 ## 6. TUS
-lk.TUS = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(av.low, dx.low, pro.low, pro.low), upper = c(av.high, dx.high, pro.high, pro.high)); lk.TUS
+lk.ATUS = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(av.low, dx.low, pro.low, pro.low), upper = c(av.high, dx.high, pro.high, pro.high)); lk.ATUS
 
 ## 7. TUN
-lk.TUN = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(av.low, dx.low, pro.low, pro.low), upper = c(av.high, dx.high, pro.high, pro.high)); lk.TUN
+lk.ATUN = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(av.low, dx.low, pro.low, pro.low), upper = c(av.high, dx.high, pro.high, pro.high)); lk.ATUN
 
 ## 8. TU
-lk.TU = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(av.low, dx.low), upper = c(av.high, dx.high)); lk.TU
+lk.ATU = nll.wrapper(pars.in = c('rAV' = .5, 'rDX' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(av.low, dx.low), upper = c(av.high, dx.high)); lk.ATU
 
 ## 9. TVG 
-lk.TVG = nll.wrapper(pars.in = c('rAV' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(av.low, vx.low, vx.low, pro.low, pro.low), upper = c(av.high, vx.high, vx.high, pro.high, pro.high)); lk.TVG
+lk.ATVG = nll.wrapper(pars.in = c('rAV' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(av.low, vx.low, vx.low, pro.low, pro.low), upper = c(av.high, vx.high, vx.high, pro.high, pro.high)); lk.ATVG
 
 ## 10. TVS
-lk.TVS = nll.wrapper(pars.in = c('rAV' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(av.low, vx.low, vx.low, pro.low, pro.low), upper = c(av.high, vx.high, vx.high, pro.high, pro.high)); lk.TVS
+lk.ATVS = nll.wrapper(pars.in = c('rAV' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(av.low, vx.low, vx.low, pro.low, pro.low), upper = c(av.high, vx.high, vx.high, pro.high, pro.high)); lk.ATVS
 
 ## 11. TVN
-lk.TVN = nll.wrapper(pars.in = c('rAV' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(av.low, vx.low, vx.low, pro.low, pro.low), upper = c(av.high, vx.high, vx.high, pro.high, pro.high)); lk.TVN
+lk.ATVN = nll.wrapper(pars.in = c('rAV' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(av.low, vx.low, vx.low, pro.low, pro.low), upper = c(av.high, vx.high, vx.high, pro.high, pro.high)); lk.ATVN
 
 ## 12. TV
-lk.TV = nll.wrapper(pars.in = c('rAV' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(av.low, vx.low, vx.low), upper = c(av.high, vx.high, vx.high)); lk.TV
+lk.ATV = nll.wrapper(pars.in = c('rAV' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(av.low, vx.low, vx.low), upper = c(av.high, vx.high, vx.high)); lk.ATV
 
 ## 13. UVG 
-lk.UVG = nll.wrapper(pars.in = c('rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(dx.low, vx.low, vx.low, pro.low, pro.low), upper = c(dx.high, vx.high, vx.high, pro.high, pro.high)); lk.UVG
+lk.AUVG = nll.wrapper(pars.in = c('rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(dx.low, vx.low, vx.low, pro.low, pro.low), upper = c(dx.high, vx.high, vx.high, pro.high, pro.high)); lk.AUVG
 
 ## 14. UVS
-lk.UVS = nll.wrapper(pars.in = c('rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(dx.low, vx.low, vx.low, pro.low, pro.low), upper = c(dx.high, vx.high, vx.high, pro.high, pro.high)); lk.UVS
+lk.AUVS = nll.wrapper(pars.in = c('rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(dx.low, vx.low, vx.low, pro.low, pro.low), upper = c(dx.high, vx.high, vx.high, pro.high, pro.high)); lk.AUVS
 
 ## 15. UVN
-lk.UVN = nll.wrapper(pars.in = c('rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(dx.low, vx.low, vx.low, pro.low, pro.low), upper = c(dx.high, vx.high, vx.high, pro.high, pro.high)); lk.UVN
+lk.AUVN = nll.wrapper(pars.in = c('rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(dx.low, vx.low, vx.low, pro.low, pro.low), upper = c(dx.high, vx.high, vx.high, pro.high, pro.high)); lk.AUVN
 
 ## 16. UV
-lk.UV = nll.wrapper(pars.in = c('rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(dx.low, vx.low, vx.low), upper = c(dx.high, vx.high, vx.high)); lk.UV
+lk.AUV = nll.wrapper(pars.in = c('rDX' = .5, 'rVX.H1' = .5, 'rVX.H3' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(dx.low, vx.low, vx.low), upper = c(dx.high, vx.high, vx.high)); lk.AUV
 
 ## 17. UG 
-lk.UG = nll.wrapper(pars.in = c('rDX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(dx.low, pro.low, pro.low), upper = c(dx.high, pro.high, pro.high)); lk.UG
+lk.AUG = nll.wrapper(pars.in = c('rDX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(dx.low, pro.low, pro.low), upper = c(dx.high, pro.high, pro.high)); lk.AUG
 
 ## 18. US
-lk.US = nll.wrapper(pars.in = c('rDX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(dx.low, pro.low, pro.low), upper = c(dx.high, pro.high, pro.high)); lk.US
+lk.AUS = nll.wrapper(pars.in = c('rDX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(dx.low, pro.low, pro.low), upper = c(dx.high, pro.high, pro.high)); lk.AUS
 
 ## 19. UN
-lk.UN = nll.wrapper(pars.in = c('rDX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(dx.low, pro.low, pro.low), upper = c(dx.high, pro.high, pro.high)); lk.UN
+lk.AUN = nll.wrapper(pars.in = c('rDX' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(dx.low, pro.low, pro.low), upper = c(dx.high, pro.high, pro.high)); lk.AUN
 
 ## 20. U
-lk.U = nll.wrapper(pars.in = c('rDX' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(dx.low), upper = c(dx.high)); lk.U
+lk.AU = nll.wrapper(pars.in = c('rDX' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(dx.low), upper = c(dx.high)); lk.AU
 
 ## 21. TG 
-lk.TG = nll.wrapper(pars.in = c('rAV' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(av.low, pro.low, pro.low), upper = c(av.high, pro.high, pro.high)); lk.TG
+lk.ATG = nll.wrapper(pars.in = c('rAV' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(av.low, pro.low, pro.low), upper = c(av.high, pro.high, pro.high)); lk.ATG
 
 ## 22. TS
-lk.TS = nll.wrapper(pars.in = c('rAV' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(av.low, pro.low, pro.low), upper = c(av.high, pro.high, pro.high)); lk.TS
+lk.ATS = nll.wrapper(pars.in = c('rAV' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(av.low, pro.low, pro.low), upper = c(av.high, pro.high, pro.high)); lk.ATS
 
 ## 23. TN
-lk.TN = nll.wrapper(pars.in = c('rAV' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(av.low, pro.low, pro.low), upper = c(av.high, pro.high, pro.high)); lk.TN
+lk.ATN = nll.wrapper(pars.in = c('rAV' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(av.low, pro.low, pro.low), upper = c(av.high, pro.high, pro.high)); lk.ATN
 
 ## 24. T
-lk.T = nll.wrapper(pars.in = c('rAV' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(av.low), upper = c(av.high)); lk.T
+lk.AT = nll.wrapper(pars.in = c('rAV' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(av.low), upper = c(av.high)); lk.AT
 
 ## 25. VG 
-lk.VG = nll.wrapper(pars.in = c('rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(vx.low, vx.low, pro.low, pro.low), upper = c(vx.high, vx.high, pro.high, pro.high)); lk.VG
+lk.AVG = nll.wrapper(pars.in = c('rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(vx.low, vx.low, pro.low, pro.low), upper = c(vx.high, vx.high, pro.high, pro.high)); lk.AVG
 
 ## 26. VS
-lk.VS = nll.wrapper(pars.in = c('rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(vx.low, vx.low, pro.low, pro.low), upper = c(vx.high, vx.high, pro.high, pro.high)); lk.VS
+lk.AVS = nll.wrapper(pars.in = c('rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(vx.low, vx.low, pro.low, pro.low), upper = c(vx.high, vx.high, pro.high, pro.high)); lk.AVS
 
 ## 27. VN
-lk.VN = nll.wrapper(pars.in = c('rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(vx.low, vx.low, pro.low, pro.low), upper = c(vx.high, vx.high, pro.high, pro.high)); lk.VN
+lk.AVN = nll.wrapper(pars.in = c('rVX.H1' = .5, 'rVX.H3' = .5, 'rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(vx.low, vx.low, pro.low, pro.low), upper = c(vx.high, vx.high, pro.high, pro.high)); lk.AVN
 
 ## 28. V
-lk.V = nll.wrapper(pars.in = c('rVX.H1' = .5, 'rVX.H3' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(vx.low, vx.low), upper = c(vx.high, vx.high)); lk.V
+lk.AV = nll.wrapper(pars.in = c('rVX.H1' = .5, 'rVX.H3' = .5), pro.H1 = 1, pro.H3 = 1, lower.in = c(vx.low, vx.low), upper = c(vx.high, vx.high)); lk.AV
 
 ## 29. G 
-lk.G = nll.wrapper(pars.in = c('rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(pro.low, pro.low), upper = c(pro.high, pro.high)); lk.G
+lk.AG = nll.wrapper(pars.in = c('rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = prog1.master, pro.H3 = prog2.master, lower.in = c(pro.low, pro.low), upper = c(pro.high, pro.high)); lk.AG
 
 ## 30. S
-lk.S = nll.wrapper(pars.in = c('rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(pro.low, pro.low), upper = c(pro.high, pro.high)); lk.S
+lk.AS = nll.wrapper(pars.in = c('rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proH1.master, pro.H3 = proH3.master, lower.in = c(pro.low, pro.low), upper = c(pro.high, pro.high)); lk.AS
 
 ## 31. N
-lk.N = nll.wrapper(pars.in = c('rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(pro.low, pro.low), upper = c(pro.high, pro.high)); lk.N
+lk.AN = nll.wrapper(pars.in = c('rPro.H1' = .5, 'rPro.H3' = .5), pro.H1 = proN1.master, pro.H3 = proN2.master, lower.in = c(pro.low, pro.low), upper = c(pro.high, pro.high)); lk.AN
 
 ## 32. NULL
-lk.null = nll.wrapper(pars.in = NULL, pro.H1 = 1, pro.H3 = 1, lower.in = NULL, upper = NULL); lk.null
+lk.A = nll.wrapper(pars.in = NULL, pro.H1 = 1, pro.H3 = 1, lower.in = NULL, upper = NULL); lk.A
 
 
 
@@ -168,6 +172,14 @@ del.AIC
 # G = group
 # S = subtype
 # N = neuraminidase
+
+
+
+#####################
+## save fitted models
+#####################
+fits = mget(ls(pattern = 'lk.\\w+'))
+save(fits, del.AIC, file = outfile1)
 
 
 
