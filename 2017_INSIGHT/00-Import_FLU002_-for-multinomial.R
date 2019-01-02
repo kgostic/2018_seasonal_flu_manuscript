@@ -194,104 +194,106 @@ load('../../Reconstructions/INSIGHT_weights2018-12-04.RData')
 
 
 
+####### THIS METHOD CALCULATES IMPRINTING PROBS FOR EACH INDIVIDUAL, AND THEN TAKES A WEIGHTS AVERAGE OF PROBS FOR ALL INDIVIDUALS IN A GIVEN COUNTRY, YEAR AND AGE TO FILL IN THE MASTER MATRIX. 
+## USE IF YOU DECIDE TO DO GLMMS.
+## ELSE, STICK TO THE METHOD BELOW, WHICH YOU ALREADY WROTE UP.
+# ###################### NEW CODE
+# 
+# ##### ------
+# # Impute possible birth years, and weighted average of birth year-specific imprinting protection probs from age and date of enrollment.
+# ##### -------
+# # Rationale for multiple possible birth years given in methods
+# # Initialize matrix to store probs of birth in years y-a-1, y-a, and y-a+1 given the month of observation.
+# by_probs = matrix(NA, 12, 2, dimnames = list(format(ISOdate(2018,1:12,1),"%B"), c('y-a-1', 'y-a')))
+# by_probs[,1] = seq(11.5, .5, by = -1)
+# by_probs[,2] = seq(.5, 11.5, by = 1)
+# 
+# # calculate vectors of possible birth years for each subject
+# y_a_1 = dat.002$year - dat.002$age - 1 # y-a-1
+# y_a = y_a_1 + 1 # y-a
+# 
+# # generate a vector of weights, representing the prob that each individual was born in year y-a-1, or y-a, given their month of observation
+# w1 = by_probs[dat.002$num_month,1]/12
+# w2 = by_probs[dat.002$num_month,2]/12
+# any(w1+w2 != 1) # Check that all weights sum to 1 for each individual
+# 
+# # extract probs of protection for each individual, given birth in year y-a-1 and y-a
+# rns = paste(dat.002$year, dat.002$country, sep = "")
+# # Write wrappers to extract entries from a given weights matrix (weights[[1]], weights[[2]]. Return entries corresponding to country-years (rows), and possible birth years (1 = y-a-1, 2 = y-a))
+# ext_wts_1 = function(wmat){mapply(FUN = function(rr, cc){wmat[rr, cc]}, rr = rns, cc = as.character(y_a_1))}
+# ext_wts_2 = function(wmat){mapply(FUN = function(rr, cc){wmat[rr, cc]}, rr = rns, cc = as.character(y_a))}
+# ## Subtype -specific protection
+# pH1pro1 = ext_wts_1(weights[[1]])
+# pH1pro2 = ext_wts_2(weights[[1]])
+# pH3pro1 = ext_wts_1(weights[[3]])
+# pH3pro2 = ext_wts_2(weights[[3]])
+# 
+# pg1pro1 = ext_wts_1(weights[[1]])+ext_wts_1(weights[[2]])
+# pg1pro2 = ext_wts_2(weights[[1]])+ext_wts_2(weights[[2]])
+# pg2pro1 = ext_wts_1(weights[[3]])
+# pg2pro2 = ext_wts_2(weights[[3]])
+# 
+# pN1pro1 = ext_wts_1(weights[[1]])
+# pN1pro2 = ext_wts_2(weights[[1]])
+# pN2pro1 = ext_wts_1(weights[[3]])+ext_wts_1(weights[[2]])
+# pN2pro2 = ext_wts_2(weights[[3]])+ext_wts_2(weights[[2]])
+# 
+# # take a weighted average of birth year-specific protection probs for each individual
+# dat.002$pH1pro = w1*pH1pro1+w2*pH1pro2; rm(pH1pro1, pH1pro2)
+# dat.002$pH3pro = w1*pH3pro1+w2*pH3pro2; rm(pH3pro1, pH3pro2)
+# dat.002$pg1pro = w1*pg1pro1+w2*pg1pro2; rm(pg1pro1, pg1pro2)
+# dat.002$pg2pro = w1*pg2pro1+w2*pg2pro2; rm(pg2pro1, pg2pro2)
+# dat.002$pN1pro = w1*pN1pro1+w2*pN1pro2; rm(pN1pro1, pN1pro2)
+# dat.002$pN2pro = w1*pN2pro1+w2*pN2pro2; rm(pN2pro1, pN2pro2, w1, w2, rns)
+# 
+# # ## Check that imprinting never exceed 1 within each hypothesis
+# # plot(dat.002$pH1pro + dat.002$pH3pro)
+# # plot(dat.002$pg1pro + dat.002$pg2pro)
+# # plot(dat.002$pN1pro + dat.002$pN2pro)
+# 
+# 
+# ####################################################################
+# ## 4c. create corresponding tables of the probability of imprinting protection
+# ##     for individuals of age a, in a given country-season:
+# ##       - First, determine possible birth years based on age at the time of study enrollment.
+# ##       - Then, calculate probabilities of protection. p(protection|birth year) are found in the weights list loaded above.
+# ################
+# # Initialize matrices of the same dimensions as the data master matrices to store imprinting protection probs
+# proH1.master = proH2.master = proH3.master = prog1.master = prog2.master = proN1.master = proN2.master = H1.master*0
+# 
+# ## For each country-season of case observation (i.e. each row of the master matrix),
+# ##  calculate age-specific probs of imprinting protection
+# ages = as.numeric(colnames(H1.master)) # Get relevant single years of age
+# rns = paste(dat.002$country, dat.002$season, sep = "_")
+# for(rr in rownames(H1.master)){
+#  for(aa in ages){
+#   valid = which(dat.002$age == aa & rns == rr)
+#   if(length(valid)>0){ # If any cases observed, fill in probs. Otherwise, p(protection) = 0
+#   # Calculate mean impritning prob for all valid individuals in data
+#   proH1.master[rr,as.character(aa)] = mean(dat.002$pH1pro[valid])
+#   proH3.master[rr,as.character(aa)] = mean(dat.002$pH3pro[valid])
+#   
+#   prog1.master[rr,as.character(aa)] = mean(dat.002$pg1pro[valid])
+#   prog2.master[rr,as.character(aa)] = mean(dat.002$pg2pro[valid])
+#   
+#   proN1.master[rr,as.character(aa)] = mean(dat.002$pN1pro[valid])
+#   proN2.master[rr,as.character(aa)] = mean(dat.002$pN2pro[valid])
+#   }
+#  }
+# }
+# 
+# 
+# ###################### END NEW CODE
 
-###################### NEW CODE
-
-##### ------
-# Impute possible birth years, and weighted average of birth year-specific imprinting protection probs from age and date of enrollment.
-##### -------
-# Rationale for multiple possible birth years given in methods
-# Initialize matrix to store probs of birth in years y-a-1, y-a, and y-a+1 given the month of observation.
-by_probs = matrix(NA, 12, 2, dimnames = list(format(ISOdate(2018,1:12,1),"%B"), c('y-a-1', 'y-a')))
-by_probs[,1] = seq(11.5, .5, by = -1)
-by_probs[,2] = seq(.5, 11.5, by = 1)
-
-# calculate vectors of possible birth years for each subject
-y_a_1 = dat.002$year - dat.002$age - 1 # y-a-1
-y_a = y_a_1 + 1 # y-a
-
-# generate a vector of weights, representing the prob that each individual was born in year y-a-1, or y-a, given their month of observation
-w1 = by_probs[dat.002$num_month,1]/12
-w2 = by_probs[dat.002$num_month,2]/12
-any(w1+w2 != 1) # Check that all weights sum to 1 for each individual
-
-# extract probs of protection for each individual, given birth in year y-a-1 and y-a
-rns = paste(dat.002$year, dat.002$country, sep = "")
-# Write wrappers to extract entries from a given weights matrix (weights[[1]], weights[[2]]. Return entries corresponding to country-years (rows), and possible birth years (1 = y-a-1, 2 = y-a))
-ext_wts_1 = function(wmat){mapply(FUN = function(rr, cc){wmat[rr, cc]}, rr = rns, cc = as.character(y_a_1))}
-ext_wts_2 = function(wmat){mapply(FUN = function(rr, cc){wmat[rr, cc]}, rr = rns, cc = as.character(y_a))}
-## Subtype -specific protection
-pH1pro1 = ext_wts_1(weights[[1]])
-pH1pro2 = ext_wts_2(weights[[1]])
-pH3pro1 = ext_wts_1(weights[[3]])
-pH3pro2 = ext_wts_2(weights[[3]])
-
-pg1pro1 = ext_wts_1(weights[[1]])+ext_wts_1(weights[[2]])
-pg1pro2 = ext_wts_2(weights[[1]])+ext_wts_2(weights[[2]])
-pg2pro1 = ext_wts_1(weights[[3]])
-pg2pro2 = ext_wts_2(weights[[3]])
-
-pN1pro1 = ext_wts_1(weights[[1]])
-pN1pro2 = ext_wts_2(weights[[1]])
-pN2pro1 = ext_wts_1(weights[[3]])+ext_wts_1(weights[[2]])
-pN2pro2 = ext_wts_2(weights[[3]])+ext_wts_2(weights[[2]])
-
-# take a weighted average of birth year-specific protection probs for each individual
-dat.002$pH1pro = w1*pH1pro1+w2*pH1pro2; rm(pH1pro1, pH1pro2)
-dat.002$pH3pro = w1*pH3pro1+w2*pH3pro2; rm(pH3pro1, pH3pro2)
-dat.002$pg1pro = w1*pg1pro1+w2*pg1pro2; rm(pg1pro1, pg1pro2)
-dat.002$pg2pro = w1*pg2pro1+w2*pg2pro2; rm(pg2pro1, pg2pro2)
-dat.002$pN1pro = w1*pN1pro1+w2*pN1pro2; rm(pN1pro1, pN1pro2)
-dat.002$pN2pro = w1*pN2pro1+w2*pN2pro2; rm(pN2pro1, pN2pro2, w1, w2, rns)
-
-# ## Check that imprinting never exceed 1 within each hypothesis
-# plot(dat.002$pH1pro + dat.002$pH3pro)
-# plot(dat.002$pg1pro + dat.002$pg2pro)
-# plot(dat.002$pN1pro + dat.002$pN2pro)
-
-
-####################################################################
-## 4c. create corresponding tables of the probability of imprinting protection
-##     for individuals of age a, in a given country-season:
-##       - First, determine possible birth years based on age at the time of study enrollment.
-##       - Then, calculate probabilities of protection. p(protection|birth year) are found in the weights list loaded above.
-################
-# Initialize matrices of the same dimensions as the data master matrices to store imprinting protection probs
-proH1.master = proH2.master = proH3.master = prog1.master = prog2.master = proN1.master = proN2.master = H1.master*0
-
-## For each country-season of case observation (i.e. each row of the master matrix),
-##  calculate age-specific probs of imprinting protection
-ages = as.numeric(colnames(H1.master)) # Get relevant single years of age
-rns = paste(dat.002$country, dat.002$season, sep = "_")
-for(rr in rownames(H1.master)){
- for(aa in ages){
-  valid = which(dat.002$age == aa & rns == rr)
-  if(length(valid)>0){ # If any cases observed, fill in probs. Otherwise, p(protection) = 0
-  # Calculate mean impritning prob for all valid individuals in data
-  proH1.master[rr,as.character(aa)] = mean(dat.002$pH1pro[valid])
-  proH3.master[rr,as.character(aa)] = mean(dat.002$pH3pro[valid])
-  
-  prog1.master[rr,as.character(aa)] = mean(dat.002$pg1pro[valid])
-  prog2.master[rr,as.character(aa)] = mean(dat.002$pg2pro[valid])
-  
-  proN1.master[rr,as.character(aa)] = mean(dat.002$pN1pro[valid])
-  proN2.master[rr,as.character(aa)] = mean(dat.002$pN2pro[valid])
-  }
- }
-}
-
-
-###################### END NEW CODE
 
 
 
-
-proH1.master2 = proH1.master
-proH3.master2 = proH3.master
-proN1.master2 = proN1.master
-proN2.master2 = proN2.master
-prog1.master2 = prog1.master
-prog2.master2 = prog2.master
+# proH1.master2 = proH1.master
+# proH3.master2 = proH3.master
+# proN1.master2 = proN1.master
+# proN2.master2 = proN2.master
+# prog1.master2 = prog1.master
+# prog2.master2 = prog2.master
 
 
 
@@ -302,68 +304,68 @@ prog2.master2 = prog2.master
 
 ###################### OLD CODE
 
-# ####################################################################
-# ## 4c. create corresponding tables of the probability of imprinting protection
-# ##     for individuals of age a, in a given country-season:
-# ##       - First, determine possible birth years based on age at the time of study enrollment.
-# ##       - Then, calculate probabilities of protection. p(protection|birth year) are found in the weights list loaded above.
-# ################
-# ##  Rationale for multiple possible birth years:
-# # SH season includes months April-Sept
-# ##  Given age observed April-Sept, there's a 50% chance that your birthday was in the previous calendar year, and a 50% chance that your birthday was in the current calendar year.
-# ##     --> A newborn of age 0 in April could have been born in May-Dec. of the previous year (8/12 chance of being born in year y-1), or could have been born in Jan-April of the curren tyear (4/12 chance of being born in year y)
-# ##     --> Following the same logic, and averaging across probabilities of birth in year y, or y-1, given observation in April-Sept, the overall probabilities of birth in years y and y-1 come out to:
-# ##                 p(by = y - 1) = 0.5
-# #                  p(by = y) = 0.5
-# # For a NH season, your age is observed at the end of the calendar, year, so there's a lower chance that your birthday was in the previous calendar year, and a higher chance that your birthday is in the current calendar year.
-# ##  Follow the same logic as above
-# ##  See Methods for a better description
-# ##                 p(by = y1 - 1) = 0.0625
-# #                  p(by = y1) = 0.875
-# #                  p(by = y2) = 0.0625
-# ## Extract y1 from season rownames.  (y1 = year of case observation, or first year relevant to a NH season. E.g. y1 = 2000 for the 2000 SH season, or for the 2000-2001 NH season)
-# y1s = as.numeric(gsub(pattern = "(\\w+_\\w\\w\\.)(\\d\\d)(\\.?\\d?\\d?)", replacement = "\\2", x = rownames(H1.master)))
-# # Extract hemisphere
-# hemisphere = gsub(pattern = "(\\w+)_(\\w\\w)(\\.\\d\\d)(\\.?\\d?\\d?)", replacement = "\\2", x = rownames(H1.master))
-# # Initialize matrices of the same dimensions as the data master matrices to store imprinting protection probs
-# proH1.master = proH2.master = proH3.master = prog1.master = prog2.master = proN1.master = proN2.master = H1.master*0
-# 
-# ## For each country-season of case observation (i.e. each row of the master matrix),
-# ##  calculate age-specific probs of imprinting protection
-# for(rr in 1:nrow(H1.master)){
-#   ages = as.numeric(colnames(H1.master)) # Get relevant single years of age
-#   if(hemisphere[rr] == "SH"){
-#     b2 = y1s[rr]+2000-ages # Later possible birth year given by current year-age
-#     b1 = b2-1 ## Also possible to be born one year before y1-age (e.g. if your birthday is late in the year)
-#     rn = paste(y1s[rr]+2000, ccs[rr], sep = "") # Extract the weights row name for y-1 and country
-#     #                 #- p_H1N1 from year and country -#           #- p_H1N1 from year and country -#
-#     #                 #- cols represent by1           -#           #- cols represent by2           -#
-#   proH1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.5 + weights[[1]][rn, as.character(b2)]*0.5 ## HA subtype-specific protection against H1
-#   proH2.master[rr,] = weights[[2]][rn, as.character(b1)]*0.5 + weights[[2]][rn, as.character(b2)]*0.5 ## H2 subtype-specific protection
-#   proH3.master[rr,] = weights[[3]][rn, as.character(b1)]*0.5 + weights[[3]][rn, as.character(b2)]*0.5 ## HA subtype-specific protection against H3
-#   prog1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.5 + weights[[1]][rn, as.character(b2)]*0.5 + weights[[2]][rn, as.character(b1)]*0.5 + weights[[2]][rn, as.character(b2)]*0.5 ## HA group-specific protection against H1
-#   prog2.master[rr,] = weights[[3]][rn, as.character(b1)]*0.5 + weights[[3]][rn, as.character(b2)]*0.5 ## HA group-specific protection against H3
-#   proN1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.5 + weights[[1]][rn, as.character(b2)]*0.5 ## NA subtype-specific protection against N1
-#   proN2.master[rr,] = weights[[3]][rn, as.character(b1)]*0.5 + weights[[3]][rn, as.character(b2)]*0.5 + weights[[2]][rn, as.character(b1)]*0.5 + weights[[2]][rn, as.character(b2)]*0.5 ## NA subtype-specific protection against N2
-# 
-#   ## For NH, implement different weighting of possible birth years
-#   }else if(hemisphere[rr]=='NH'){
-#     b2 = y1s[rr]+2000-ages # Second possible birth year given by current year-age
-#     b1 = b2-1 # First possible birth year is in the previous year
-#     b3 = b2+1 # Third possible birth year is in the following year (e.g. if it's the 2000-2001 NH season, a child of age 0 could have been born in December 1999 (if the case was observed from Oct-Nov), born December 2000 (if the case was observed after December), or born January 2001). b1, b2 and b3 represent 3 possible birth years for each age observed.
-#     rn = paste(y1s[rr]+2000, ccs[rr], sep = "") # Extract the row name for y-1 and country
-#     #                 #- p_H1N1 from year and country -#           #- p_H1N1 from year and country -#
-#     #                 #- cols represent by1           -#           #- cols represent by2           -#
-#     proH1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.0625 + weights[[1]][rn, as.character(b2)]*0.875 + weights[[1]][rn, as.character(b3)]*0.0625
-#     proH2.master[rr,] = weights[[2]][rn, as.character(b1)]*0.0625 + weights[[2]][rn, as.character(b2)]*0.875 + weights[[2]][rn, as.character(b3)]*0.0625
-#     proH3.master[rr,] = weights[[3]][rn, as.character(b1)]*0.0625 + weights[[3]][rn, as.character(b2)]*0.875 + weights[[3]][rn, as.character(b3)]*0.0625
-# 
-#     prog1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.0625 + weights[[1]][rn, as.character(b2)]*0.875 + weights[[1]][rn, as.character(b3)]*0.0625 + weights[[2]][rn, as.character(b1)]*0.0625 + weights[[2]][rn, as.character(b2)]*0.875 + weights[[2]][rn, as.character(b3)]*0.0625
-#     prog2.master[rr,] = weights[[3]][rn, as.character(b1)]*0.0625 + weights[[3]][rn, as.character(b2)]*0.875 + weights[[3]][rn, as.character(b3)]*0.0625
-#     proN1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.0625 + weights[[1]][rn, as.character(b2)]*0.875 + weights[[1]][rn, as.character(b3)]*0.0625
-#     proN2.master[rr,] = weights[[3]][rn, as.character(b1)]*0.0625 + weights[[3]][rn, as.character(b2)]*0.875 + weights[[3]][rn, as.character(b3)]*0.0625 + weights[[2]][rn, as.character(b1)]*0.0625 + weights[[2]][rn, as.character(b2)]*0.875 + weights[[2]][rn, as.character(b3)]*0.0625
-#   }
-# }
+####################################################################
+## 4c. create corresponding tables of the probability of imprinting protection
+##     for individuals of age a, in a given country-season:
+##       - First, determine possible birth years based on age at the time of study enrollment.
+##       - Then, calculate probabilities of protection. p(protection|birth year) are found in the weights list loaded above.
+################
+##  Rationale for multiple possible birth years:
+# SH season includes months April-Sept
+##  Given age observed April-Sept, there's a 50% chance that your birthday was in the previous calendar year, and a 50% chance that your birthday was in the current calendar year.
+##     --> A newborn of age 0 in April could have been born in May-Dec. of the previous year (8/12 chance of being born in year y-1), or could have been born in Jan-April of the curren tyear (4/12 chance of being born in year y)
+##     --> Following the same logic, and averaging across probabilities of birth in year y, or y-1, given observation in April-Sept, the overall probabilities of birth in years y and y-1 come out to:
+##                 p(by = y - 1) = 0.5
+#                  p(by = y) = 0.5
+# For a NH season, your age is observed at the end of the calendar, year, so there's a lower chance that your birthday was in the previous calendar year, and a higher chance that your birthday is in the current calendar year.
+##  Follow the same logic as above
+##  See Methods for a better description
+##                 p(by = y1 - 1) = 0.0625
+#                  p(by = y1) = 0.875
+#                  p(by = y2) = 0.0625
+## Extract y1 from season rownames.  (y1 = year of case observation, or first year relevant to a NH season. E.g. y1 = 2000 for the 2000 SH season, or for the 2000-2001 NH season)
+y1s = as.numeric(gsub(pattern = "(\\w+_\\w\\w\\.)(\\d\\d)(\\.?\\d?\\d?)", replacement = "\\2", x = rownames(H1.master)))
+# Extract hemisphere
+hemisphere = gsub(pattern = "(\\w+)_(\\w\\w)(\\.\\d\\d)(\\.?\\d?\\d?)", replacement = "\\2", x = rownames(H1.master))
+# Initialize matrices of the same dimensions as the data master matrices to store imprinting protection probs
+proH1.master = proH2.master = proH3.master = prog1.master = prog2.master = proN1.master = proN2.master = H1.master*0
+
+## For each country-season of case observation (i.e. each row of the master matrix),
+##  calculate age-specific probs of imprinting protection
+for(rr in 1:nrow(H1.master)){
+  ages = as.numeric(colnames(H1.master)) # Get relevant single years of age
+  if(hemisphere[rr] == "SH"){
+    b2 = y1s[rr]+2000-ages # Later possible birth year given by current year-age
+    b1 = b2-1 ## Also possible to be born one year before y1-age (e.g. if your birthday is late in the year)
+    rn = paste(y1s[rr]+2000, ccs[rr], sep = "") # Extract the weights row name for y-1 and country
+    #                 #- p_H1N1 from year and country -#           #- p_H1N1 from year and country -#
+    #                 #- cols represent by1           -#           #- cols represent by2           -#
+  proH1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.5 + weights[[1]][rn, as.character(b2)]*0.5 ## HA subtype-specific protection against H1
+  proH2.master[rr,] = weights[[2]][rn, as.character(b1)]*0.5 + weights[[2]][rn, as.character(b2)]*0.5 ## H2 subtype-specific protection
+  proH3.master[rr,] = weights[[3]][rn, as.character(b1)]*0.5 + weights[[3]][rn, as.character(b2)]*0.5 ## HA subtype-specific protection against H3
+  prog1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.5 + weights[[1]][rn, as.character(b2)]*0.5 + weights[[2]][rn, as.character(b1)]*0.5 + weights[[2]][rn, as.character(b2)]*0.5 ## HA group-specific protection against H1
+  prog2.master[rr,] = weights[[3]][rn, as.character(b1)]*0.5 + weights[[3]][rn, as.character(b2)]*0.5 ## HA group-specific protection against H3
+  proN1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.5 + weights[[1]][rn, as.character(b2)]*0.5 ## NA subtype-specific protection against N1
+  proN2.master[rr,] = weights[[3]][rn, as.character(b1)]*0.5 + weights[[3]][rn, as.character(b2)]*0.5 + weights[[2]][rn, as.character(b1)]*0.5 + weights[[2]][rn, as.character(b2)]*0.5 ## NA subtype-specific protection against N2
+
+  ## For NH, implement different weighting of possible birth years
+  }else if(hemisphere[rr]=='NH'){
+    b2 = y1s[rr]+2000-ages # Second possible birth year given by current year-age
+    b1 = b2-1 # First possible birth year is in the previous year
+    b3 = b2+1 # Third possible birth year is in the following year (e.g. if it's the 2000-2001 NH season, a child of age 0 could have been born in December 1999 (if the case was observed from Oct-Nov), born December 2000 (if the case was observed after December), or born January 2001). b1, b2 and b3 represent 3 possible birth years for each age observed.
+    rn = paste(y1s[rr]+2000, ccs[rr], sep = "") # Extract the row name for y-1 and country
+    #                 #- p_H1N1 from year and country -#           #- p_H1N1 from year and country -#
+    #                 #- cols represent by1           -#           #- cols represent by2           -#
+    proH1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.0625 + weights[[1]][rn, as.character(b2)]*0.875 + weights[[1]][rn, as.character(b3)]*0.0625
+    proH2.master[rr,] = weights[[2]][rn, as.character(b1)]*0.0625 + weights[[2]][rn, as.character(b2)]*0.875 + weights[[2]][rn, as.character(b3)]*0.0625
+    proH3.master[rr,] = weights[[3]][rn, as.character(b1)]*0.0625 + weights[[3]][rn, as.character(b2)]*0.875 + weights[[3]][rn, as.character(b3)]*0.0625
+
+    prog1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.0625 + weights[[1]][rn, as.character(b2)]*0.875 + weights[[1]][rn, as.character(b3)]*0.0625 + weights[[2]][rn, as.character(b1)]*0.0625 + weights[[2]][rn, as.character(b2)]*0.875 + weights[[2]][rn, as.character(b3)]*0.0625
+    prog2.master[rr,] = weights[[3]][rn, as.character(b1)]*0.0625 + weights[[3]][rn, as.character(b2)]*0.875 + weights[[3]][rn, as.character(b3)]*0.0625
+    proN1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.0625 + weights[[1]][rn, as.character(b2)]*0.875 + weights[[1]][rn, as.character(b3)]*0.0625
+    proN2.master[rr,] = weights[[3]][rn, as.character(b1)]*0.0625 + weights[[3]][rn, as.character(b2)]*0.875 + weights[[3]][rn, as.character(b3)]*0.0625 + weights[[2]][rn, as.character(b1)]*0.0625 + weights[[2]][rn, as.character(b2)]*0.875 + weights[[2]][rn, as.character(b3)]*0.0625
+  }
+}
 
 
 ## Compare old and new method
