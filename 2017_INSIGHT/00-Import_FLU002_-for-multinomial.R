@@ -1,7 +1,10 @@
 ## This file loads INSIGHT FLU002 data and inputs for multinomial analysis.
+library(dplyr)
+library(tidyr)
 
 ## OUTPUTS
 outfile1 = 'processed-data/INSIGHT002_processed.csv' # .csv of cleaned data set
+outfile2 = 'processed-data/INSIGHT_case_counts.txt'
 
 ###############################
 # 1. Load raw data
@@ -73,7 +76,7 @@ dat.002$season = (ssn)
 rm(ssn) # Tidy up
 
 ## Pull out variables used in model
-dat.002 = subset(dat.002, select = c('age', 'anyvac', 'anydx', 'anyav', 'season', 'country', 'season', 'flutype'))
+dat.002 = subset(dat.002, select = c('age', 'anyvac', 'anydx', 'anyav', 'season', 'country', 'season', 'flutype', 'year'))
 nrow(dat.002) -> original
 
 ## Drop rows with missing data:
@@ -332,3 +335,13 @@ barplot(a18.24+a25.31+a32.38+a39.45+a46.52+a53.59+a60.66+a67.73+a74.80+a81.90)
 # barplot(proN1.master, main = "N1 protection")
 # barplot(proN2.master, main = "N2 protection")
 
+
+
+## Make a table by country and season for table S2
+long_table = subset(dat.002, flutype %in% c(1,2)) %>% count(flutype, season, country)
+out_table = spread(long_table, key = flutype, value = n, fill = 0)
+write.table(out_table, file = outfile2, row.names = FALSE, sep = "&")
+
+
+
+## Plot age distribution of all tested cases, INSIGHT

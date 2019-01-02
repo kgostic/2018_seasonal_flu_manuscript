@@ -345,3 +345,12 @@ any(NH.12.13.master+NH.13.14.master+NH.15.16.master+SH.13.master+SH.16.master !=
 # barplot(proN1.master, main = "N1 protection")
 # barplot(proN2.master, main = "N2 protection")
 
+
+
+
+## Get mean age of H1N1 infection for each season
+H1.age.mean = sapply(X = unique(dat.002$cs), FUN = function(ccss) mean(  subset(x = dat.002, cs == ccss & flutype == 1)$age, na.rm = TRUE  ))
+H3.age.mean = sapply(X = unique(dat.002$cs), FUN = function(ccss) mean(  subset(x = dat.002, cs == ccss & flutype == 2)$age, na.rm = TRUE  ))
+yr = as.numeric(sub(pattern = '.+(\\d\\d)', replacement = '\\1', x = unique(dat.002$cs)))+2000
+plot(yr, H1.age.mean)
+

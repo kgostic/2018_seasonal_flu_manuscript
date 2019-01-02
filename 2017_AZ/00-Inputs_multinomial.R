@@ -107,3 +107,6 @@ a81.90plus[agemat >= 81] = 1
 #barplot(a0.4 + a5.10 + a11.17 + a18.24+a25.31+a32.38+a39.45+a46.52+a53.59+a60.66+a67.73+a74.80+a81.90plus, col = rainbow(14))
 
 
+## Get a table of counts to input into table S1
+table(raw.dat$season)
+
