@@ -194,9 +194,9 @@ load('../../Reconstructions/INSIGHT_weights2018-12-04.RData')
 
 
 
-####### THIS METHOD CALCULATES IMPRINTING PROBS FOR EACH INDIVIDUAL, AND THEN TAKES A WEIGHTS AVERAGE OF PROBS FOR ALL INDIVIDUALS IN A GIVEN COUNTRY, YEAR AND AGE TO FILL IN THE MASTER MATRIX. 
-## USE IF YOU DECIDE TO DO GLMMS.
-## ELSE, STICK TO THE METHOD BELOW, WHICH YOU ALREADY WROTE UP.
+# ###### THIS METHOD CALCULATES IMPRINTING PROBS FOR EACH INDIVIDUAL, AND THEN TAKES A WEIGHTS AVERAGE OF PROBS FOR ALL INDIVIDUALS IN A GIVEN COUNTRY, YEAR AND AGE TO FILL IN THE MASTER MATRIX.
+# # USE IF YOU DECIDE TO DO GLMMS.
+# # ELSE, STICK TO THE METHOD BELOW, WHICH YOU ALREADY WROTE UP.
 # ###################### NEW CODE
 # 
 # ##### ------
@@ -272,10 +272,10 @@ load('../../Reconstructions/INSIGHT_weights2018-12-04.RData')
 #   # Calculate mean impritning prob for all valid individuals in data
 #   proH1.master[rr,as.character(aa)] = mean(dat.002$pH1pro[valid])
 #   proH3.master[rr,as.character(aa)] = mean(dat.002$pH3pro[valid])
-#   
+# 
 #   prog1.master[rr,as.character(aa)] = mean(dat.002$pg1pro[valid])
 #   prog2.master[rr,as.character(aa)] = mean(dat.002$pg2pro[valid])
-#   
+# 
 #   proN1.master[rr,as.character(aa)] = mean(dat.002$pN1pro[valid])
 #   proN2.master[rr,as.character(aa)] = mean(dat.002$pN2pro[valid])
 #   }
@@ -284,10 +284,10 @@ load('../../Reconstructions/INSIGHT_weights2018-12-04.RData')
 # 
 # 
 # ###################### END NEW CODE
-
-
-
-
+# 
+# 
+# 
+# 
 # proH1.master2 = proH1.master
 # proH3.master2 = proH3.master
 # proN1.master2 = proN1.master
@@ -343,7 +343,8 @@ for(rr in 1:nrow(H1.master)){
   proH1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.5 + weights[[1]][rn, as.character(b2)]*0.5 ## HA subtype-specific protection against H1
   proH2.master[rr,] = weights[[2]][rn, as.character(b1)]*0.5 + weights[[2]][rn, as.character(b2)]*0.5 ## H2 subtype-specific protection
   proH3.master[rr,] = weights[[3]][rn, as.character(b1)]*0.5 + weights[[3]][rn, as.character(b2)]*0.5 ## HA subtype-specific protection against H3
-  prog1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.5 + weights[[1]][rn, as.character(b2)]*0.5 + weights[[2]][rn, as.character(b1)]*0.5 + weights[[2]][rn, as.character(b2)]*0.5 ## HA group-specific protection against H1
+  prog1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.5 + weights[[1]][rn, as.character(b2)]*0.5 + 
+    weights[[2]][rn, as.character(b1)]*0.5 + weights[[2]][rn, as.character(b2)]*0.5 ## HA group-specific protection against H1
   prog2.master[rr,] = weights[[3]][rn, as.character(b1)]*0.5 + weights[[3]][rn, as.character(b2)]*0.5 ## HA group-specific protection against H3
   proN1.master[rr,] = weights[[1]][rn, as.character(b1)]*0.5 + weights[[1]][rn, as.character(b2)]*0.5 ## NA subtype-specific protection against N1
   proN2.master[rr,] = weights[[3]][rn, as.character(b1)]*0.5 + weights[[3]][rn, as.character(b2)]*0.5 + weights[[2]][rn, as.character(b1)]*0.5 + weights[[2]][rn, as.character(b2)]*0.5 ## NA subtype-specific protection against N2
@@ -368,7 +369,15 @@ for(rr in 1:nrow(H1.master)){
 }
 
 
-## Compare old and new method
+# par(mfrow = c(6, 3), mar = rep(1,4))
+# for(ii in 1:30){
+#   barplot(rbind(prog1.master[ii,], prog2.master[ii,]), border = NA)
+#   barplot(rbind(proH1.master[ii,], proH2.master[ii,], proH3.master[ii,]), border = NA)
+#   barplot(rbind(proN1.master[ii,], proN2.master[ii,]), border = NA)
+# }
+
+
+# # Compare old and new method
 # par(mfrow = c(2,2))
 # barplot(proH1.master*tested.master); barplot(proH1.master2)
 # barplot(proH3.master*tested.master); barplot(proH3.master2)
@@ -470,4 +479,68 @@ write.table(out_table, file = outfile2, row.names = FALSE, sep = "&")
 
 
 
-## Plot age distribution of all tested cases, INSIGHT
+## Remove 2009 pandemic from data
+## Define pandemic as cases from Oct. 2009 (Earliest data) -> 
+##  2010 SH season (end of Sept. 2010)
+## Do this because the 2nd pandemic wave did not hit the SH until late summer of 2010
+## Sources: https://www.eurosurveillance.org/content/10.2807/ese.16.06.19788-en
+## http://apps.who.int/flumart/Default?ReportNo=7
+## https://academic.oup.com/cid/article/52/suppl_1/S13/498323
+pdm.indices = c(grep(pattern = '09', x = rownames(H1.master)), grep(pattern = 'SH.10', x = rownames(H1.master))) # extract row numbers of pandemic cases
+# H1.master[pdm.indices, ] # Check that you've pulled the right rows
+prog1.master_pandemic = prog1.master [pdm.indices,]
+prog2.master_pandemic = prog2.master[pdm.indices,]
+proH1.master_pandemic = proH1.master[pdm.indices,]
+proH3.master_pandemic = proH3.master[pdm.indices,]
+proN1.master_pandemic = proN1.master[pdm.indices,]
+proN2.master_pandemic = proN2.master[pdm.indices,]
+vac.master_pandemic = vac.master[pdm.indices,]
+tested.master_pandemic = tested.master[pdm.indices,]
+dx.master_pandemic = dx.master[pdm.indices,]
+av.master_pandemic = av.master[pdm.indices,]
+H1.master_pandemic = H1.master[pdm.indices,]
+H3.master_pandemic = H3.master[pdm.indices,]
+a18.24_pandemic = a18.24[pdm.indices,]
+a25.31_pandemic = a25.31[pdm.indices,]
+a32.38_pandemic = a32.38[pdm.indices,]
+a39.45_pandemic = a39.45[pdm.indices,]
+a46.52_pandemic = a46.52[pdm.indices,]
+a53.59_pandemic = a53.59[pdm.indices,]
+a60.66_pandemic = a60.66[pdm.indices,]
+a67.73_pandemic = a67.73[pdm.indices,]
+a74.80_pandemic = a74.80[pdm.indices,]
+a81.90_pandemic = a81.90[pdm.indices,]
+
+
+prog1.master = prog1.master[-pdm.indices,]
+prog2.master = prog2.master[-pdm.indices,]
+proH1.master = proH1.master[-pdm.indices,]
+proH2.master = proH2.master[-pdm.indices,]
+proH3.master = proH3.master[-pdm.indices,]
+proN1.master = proN1.master[-pdm.indices,]
+proN2.master = proN2.master[-pdm.indices,]
+vac.master = vac.master[-pdm.indices,]
+tested.master = tested.master[-pdm.indices,]
+dx.master = dx.master[-pdm.indices,]
+av.master = av.master[-pdm.indices,]
+H1.master = H1.master[-pdm.indices,]
+H3.master = H3.master[-pdm.indices,]
+a18.24 = a18.24[-pdm.indices,]
+a25.31 = a25.31[-pdm.indices,]
+a32.38 = a32.38[-pdm.indices,]
+a39.45 = a39.45[-pdm.indices,]
+a46.52 = a46.52[-pdm.indices,]
+a53.59 = a53.59[-pdm.indices,]
+a60.66 = a60.66[-pdm.indices,]
+a67.73 = a67.73[-pdm.indices,]
+a74.80 = a74.80[-pdm.indices,]
+a81.90 = a81.90[-pdm.indices,]
+
+
+# ## check that pro.g1.master etc. all add up
+# par(mfrow = c(6, 3), mar = rep(1,4))
+# for(ii in 1:30){
+#   barplot(rbind(prog1.master[ii,], prog2.master[ii,]), border = NA)
+#   barplot(rbind(proH1.master[ii,], proH2.master[ii,], proH3.master[ii,]), border = NA)
+#   barplot(rbind(proN1.master[ii,], proN2.master[ii,]), border = NA)
+# }

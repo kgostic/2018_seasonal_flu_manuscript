@@ -110,3 +110,54 @@ a81.90plus[agemat >= 81] = 1
 ## Get a table of counts to input into table S1
 table(raw.dat$season)
 
+
+## Hold out the 2009 pandemic (2008-09 and 2009-10 seasons)
+a0.4_2009 = a0.4[c('200809', '200910'), ]
+a5.10_2009 = a5.10[c('200809', '200910'), ]
+a11.17_2009 = a11.17[c('200809', '200910'), ]
+a18.24_2009 = a18.24[c('200809', '200910'), ]
+a25.31_2009 = a25.31[c('200809', '200910'), ]
+a32.38_2009 = a32.38[c('200809', '200910'), ]
+a39.45_2009 = a39.45[c('200809', '200910'), ]
+a46.52_2009 = a46.52[c('200809', '200910'), ]
+a53.59_2009 = a53.59[c('200809', '200910'), ]
+a60.66_2009 = a60.66[c('200809', '200910'), ]
+a67.73_2009 = a67.73[c('200809', '200910'), ]
+a74.80_2009 = a74.80[c('200809', '200910'), ]
+a81.90plus_2009 = a81.90plus[c('200809', '200910'), ]
+H1.master_2009 = H1.master[c('200809', '200910'), ]
+prog1.master_2009 = prog1.master[c('2009USA', '2010USA'), ]
+proH1.master_2009 = proH1.master[c('2009USA', '2010USA'), ]
+proN1.master_2009 = proN1.master[c('2009USA', '2010USA'), ]
+H3.master_2009 = H3.master[c('200809', '200910'), ]
+prog2.master_2009 = prog2.master[c('2009USA', '2010USA'), ]
+proH3.master_2009 = proH3.master[c('2009USA', '2010USA'), ]
+proN2.master_2009 = proN2.master[c('2009USA', '2010USA'), ]
+
+
+## Remove 2009-2010 season from master data for model fitting
+a0.4 = a0.4[-c(9,10), ]
+a5.10 = a5.10[-c(9,10), ]
+a11.17 = a11.17[-c(9,10), ]
+a18.24 = a18.24[-c(9,10), ]
+a25.31 = a25.31[-c(9,10), ]
+a32.38 = a32.38[-c(9,10), ]
+a39.45 = a39.45[-c(9,10), ]
+a46.52 = a46.52[-c(9,10), ]
+a53.59 = a53.59[-c(9,10), ]
+a60.66 = a60.66[-c(9,10), ]
+a67.73 = a67.73[-c(9,10), ]
+a74.80 = a74.80[-c(9,10), ]
+a81.90plus = a81.90plus[-c(9,10), ]
+H1.master = H1.master[-c(9,10), ]
+prog1.master = prog1.master[-c(9,10), ]
+proH1.master = proH1.master[-c(9,10), ]
+proN1.master = proN1.master[-c(9,10), ]
+H3.master = H3.master[-c(9,10), ]
+prog2.master = prog2.master[-c(9,10), ]
+proH3.master = proH3.master[-c(9,10), ]
+proN2.master = proN2.master[-c(9,10), ]
+
+
+
+

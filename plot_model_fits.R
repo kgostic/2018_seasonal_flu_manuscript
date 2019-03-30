@@ -124,7 +124,7 @@ apred = plotmod1(lk.A$par, pro.H1 = 1, pro.H3 = 1, i.type = NULL, CIs = A.CIs)
 ###########################################################################
 ## ------------------------------------------------------------------------
 pdf(outfile1, height = 8)
-layout(mat = matrix(c(1,3, 2,3, 4,4, 5,6), ncol = 2, byrow = T), widths = c(1,1), heights = c(1,1,1,1.4))
+graphics::layout(mat = matrix(c(1,3, 2,3, 4,4, 5,6), ncol = 2, byrow = T), widths = c(1,1), heights = c(1,1,1,1.4))
 par(mgp = c(2,1,0))
 #layout.show(6)
 ##########################

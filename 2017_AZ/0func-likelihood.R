@@ -182,3 +182,71 @@ profile_func = function(pars, fixed.par.name, fixed.par.value, wPro.H1, dat.H1, 
     # Total negative log likelihood is the sum of nll of H3N2 data, and of H1N1 data
     lk.H1+lk.H3 # end function 
 }
+
+
+
+
+### Write a version of the likelihood function that calculates imprinting coefficients for 2009 pandemic data (2009-10 season)
+###  THIS FUNCTION TAKES THE SAME INPUTS AND OUTPUTS AS NLL, ABOVE, EXCEPT...
+###       fitted.age.pars lists the fitted age-specific risk parameters from non-pandemic data.
+###         Use these because there was minimal H3N2 circulation during the 2009 pandemic, and so we have
+###         no ability to estimate a pandemic-specific age curve
+###       No H3N2-specific inputs, because H3N2 didn't really circulate during the pandemic
+###       ## The named pars vector should only contain rPro.H1 
+###       ## Code will optimize all paramters named in "pars," while fixing the value of the profile.par
+nll_pandemic = function(pars, fitted.age.pars, wPro.H1, dat.H1,a0.4, a5.10, a11.17, a18.24, a25.31, a32.38, a39.45, a46.52, a53.59, a60.66, a67.73, a74.80, a81.90plus){
+  # 1. Assign parameters to be fit (all age paramters, and those named in pars)
+  rPro.H1 = (pars['rPro.H1'])# Relative risk given imprinting protection
+  b = 1 # Fix relative risk in the baseline group (Ages 0-4) at value 1. Then estimate all others as relative risk. Most should be lower, bounded at 0.
+  r5.10 = fitted.age.pars['r5.10'] # Relative risk for 5 to 10 year olds (free paramter to estiamte)
+  r11.17 = fitted.age.pars['r11.17'] # Relative risk for 11-17 year olds
+  r18.24 = fitted.age.pars['r18.24'] # etc.
+  r25.31 = fitted.age.pars['r25.31']
+  r32.38 = fitted.age.pars['r32.38']
+  r39.45 = fitted.age.pars['r39.45']
+  r46.52 = fitted.age.pars['r46.52'] 
+  r53.59 = fitted.age.pars['r53.59']
+  r60.66 = fitted.age.pars['r60.66'] 
+  r67.73 = fitted.age.pars['r67.73'] 
+  r74.80 = fitted.age.pars['r74.80'] 
+  r81.90p = fitted.age.pars['r81.90p'] 
+
+  
+  ## Age-specific baseline prediction takes the same form for H1N1 and H3N2. Attempt to explain residual, subtype-specific differences through differences in imprinting history, etc. below.
+  age.baseline = b*(a0.4 +
+                      r5.10*a5.10 +
+                      r11.17*a11.17+
+                      r18.24*a18.24+
+                      r25.31*a25.31+
+                      r32.38*a32.38+ 
+                      r39.45*a39.45+ 
+                      r46.52*a46.52+ 
+                      r53.59*a53.59+ 
+                      r60.66*a60.66+ 
+                      r67.73*a67.73+ 
+                      r74.80*a74.80+ 
+                      r81.90p*a81.90plus)
+  age.baseline = age.baseline/rowSums(age.baseline) # Normalize so that the fraction of cases predicted in each age group sums to 1 across all age groups
+  
+  
+  # 2. calculate predicted distribution, pp, as a function of the parameters:
+  # This step gives the model prediction for H1N1 cases
+  pp.H1 = age.baseline * (wPro.H1*rPro.H1+(1-wPro.H1))
+
+  
+  
+  #  3. Likelihood is based on the multinomial density
+  if(is.null(dim(dat.H1))){ #DO THIS IF DATA FROM ONE YEAR INPUT AS A VECTOR
+    lk.H1 = -dmultinom(dat.H1, size = sum(dat.H1), prob = pp.H1, log = TRUE) #This line returns the log multinomial density of the observed data, with expected probabilities governed by model predictions.
+  }else{ #ELSE DO THIS IF MULTI-YEAR DATA INPUT IN A MATRIX
+    storage = vector('numeric', dim(dat.H1)[1])
+    for(jj in 1:dim(dat.H1)[1]){ #Find the neg log density for each row (dim 1) and take the sum
+      storage[jj] = -dmultinom(dat.H1[jj,], size = sum(dat.H1[jj,]), prob = pp.H1[jj,], log = TRUE)
+    }
+    lk.H1 = sum(storage) 
+  }
+  plot(1, 1, col = 'white')
+  text(1,1, paste(rPro.H1))
+  lk.H1
+}
+

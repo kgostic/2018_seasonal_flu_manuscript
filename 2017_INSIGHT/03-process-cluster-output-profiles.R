@@ -1,7 +1,7 @@
 #### Process likelihood profile outputs form UCLA's Hoffman2 cluster
 rm(list = ls())
 setwd('~/Dropbox/R/2018_seasonal_flu/2017_INSIGHT/')
-load('processed-data/fitted_models.RData') # Load fitted models
+load('processed-data/INSIGHT_fitted_models.RData') # Load fitted models
 library(ggplot2)
 library(reshape)
 library(dplyr)
@@ -157,7 +157,9 @@ imp.type.weights = sapply(c('N', 'S', 'G', 'none'), FUN = function(tt){
   sum(valid)
 })
 
-pie(sort(imp.type.weights))
+names(imp.type.weights) = c('NA subtype', 'HA subtype', 'HA group', 'no imprinting')
+pie(sort(imp.type.weights), col = c('aquamarine','white', 'gray', 'limegreen'), main = 'Akaike weights')
+
 
 length(parmat[1,])
 paste(parmat[1,], 1:16)

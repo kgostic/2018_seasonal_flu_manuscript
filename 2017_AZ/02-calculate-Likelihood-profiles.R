@@ -50,50 +50,57 @@ grid = seq(.005, 2, by = .005) # Define grid of relative risk points to test for
 # Store provile neg log likelihood values in a matrix, with the fixed parameter listed on rows, and grid value listed on columns
 A.age.prof = AG.age.prof = AS.age.prof = AN.age.prof = matrix(NA, nrow = 12, ncol = length(grid), dimnames = list(names(lk.A$par), grid))
 
-# ## Run a profile grid for each age paramter
-# ## Run grids in parallel
-# cl = makeCluster(detectCores()-1) # Make cluster
-# clusterExport(cl, ls()) # Export all variables to cluster
-# age.pars = names(lk.A$par)
-# 
-# ## For each age paramter
-# for(pp in age.pars){
-# ## lk.A age profiles
-# A.age.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.A$par, fixpar = pp, lows = rep(.001, 12), highs = rep(5, 12), H1.protection.input = 1, H3.protection.input = 1)
-# 
-# AG.age.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AG$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = prog1.master, H3.protection.input = prog2.master)
-# 
-# AS.age.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AS$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = proH1.master, H3.protection.input = proH3.master)
-# 
-# AN.age.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AN$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = proN1.master, H3.protection.input = proN2.master)
-# }
-# stopCluster(cl)
+## Run a profile grid for each age paramter
+## Run grids in parallel
+cl = makeCluster(detectCores()-1) # Make cluster
+clusterExport(cl, ls()) # Export all variables to cluster
+age.pars = names(lk.A$par)
+
+## For each age paramter
+for(pp in age.pars){
+## lk.A age profiles
+A.age.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.A$par, fixpar = pp, lows = rep(.001, 12), highs = rep(5, 12), H1.protection.input = 1, H3.protection.input = 1)
+
+AG.age.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AG$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = prog1.master, H3.protection.input = prog2.master)
+
+AS.age.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AS$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = proH1.master, H3.protection.input = proH3.master)
+
+AN.age.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AN$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = proN1.master, H3.protection.input = proN2.master)
+}
+stopCluster(cl)
 
 
 
 
 
-# ###########################
-# ## Profiles for imprinting protection pars
-# ###########################
-# ###### Initialize storage
-# grid = seq(.005, 1, by = .005) # Define grid of relative risk points to test for each paramter
-# # Store provile neg log likelihood values in a matrix, with the fixed parameter listed on rows, and grid value listed on columns
-# AG.imp.prof = AS.imp.prof = AN.imp.prof = matrix(NA, nrow = 2, ncol = length(grid), dimnames = list(c('rPro.H1', 'rPro.H3'), grid))
-# cl = makeCluster(detectCores()-1) # Make cluster
-# clusterExport(cl, ls()) # Export all variables to cluster
-# pro.pars = c('rPro.H1', 'rPro.H3')
-# ## For each age paramter
-# for(pp in pro.pars){
-#   AG.imp.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AG$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = prog1.master, H3.protection.input = prog2.master)
-#   
-#   AS.imp.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AS$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = proH1.master, H3.protection.input = proH3.master)
-#   
-#   AN.imp.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AN$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = proN1.master, H3.protection.input = proN2.master)
-# }
-# stopCluster(cl)
-# 
-# save(A.age.prof, AS.age.prof, AN.age.prof, AG.age.prof, AS.imp.prof, AG.imp.prof, AN.imp.prof, file = outfile1)
+##########################
+# Profiles for imprinting protection pars
+###########################
+###### Initialize storage
+grid = seq(.005, 1, by = .005) # Define grid of relative risk points to test for each paramter
+# Store provile neg log likelihood values in a matrix, with the fixed parameter listed on rows, and grid value listed on columns
+AG.imp.prof = AS.imp.prof = AN.imp.prof = matrix(NA, nrow = 2, ncol = length(grid), dimnames = list(c('rPro.H1', 'rPro.H3'), grid))
+cl = makeCluster(detectCores()-1) # Make cluster
+clusterExport(cl, ls()) # Export all variables to cluster
+pro.pars = c('rPro.H1', 'rPro.H3')
+## For each age paramter
+for(pp in pro.pars){
+  AG.imp.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AG$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = prog1.master, H3.protection.input = prog2.master)
+
+  AS.imp.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AS$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = proH1.master, H3.protection.input = proH3.master)
+
+  AN.imp.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AN$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = proN1.master, H3.protection.input = proN2.master)
+}
+stopCluster(cl)
+
+## Add 0s for columns corresponding to par values >1. This will pad the matrices so they have the same number of columns and same column names as the age profile matrices above
+fill = matrix(NA, nrow = 2, ncol = 200); colnames(fill) = seq(1.005, 2, by = .005)
+AG.imp.prof = cbind(AG.imp.prof, fill)
+AS.imp.prof = cbind(AS.imp.prof, fill)
+AN.imp.prof = cbind(AN.imp.prof, fill)
+
+
+save(A.age.prof, AS.age.prof, AN.age.prof, AG.age.prof, AS.imp.prof, AG.imp.prof, AN.imp.prof, file = outfile1)
 
 
 load('processed-data/AZ_profiles.RData')
@@ -204,6 +211,7 @@ LR.CI(threshold = LR.Threshold(NLL_best = mod$value, df = 1), nll.vec = prof.mat
 
 
 
+
 ## Get CIs for lk.A
 A.CIs = sapply(names(lk.A$par), FUN = get.LR.CI, mod.name = "A")
 
@@ -218,3 +226,5 @@ AS.CIs = sapply(names(lk.AS$par), FUN = get.LR.CI, mod.name = "AS")
 
 ### SAVE CIs
 save(A.CIs, AG.CIs, AN.CIs, AS.CIs, file = outfile2)
+
+

@@ -8,7 +8,7 @@ load('processed-data/AZ_profiles.RData')
 outfile1 = 'processed-data/AZ_results_table.csv'
 
 # Initialize matris
-results = matrix(NA, nrow = 4, ncol = length(lk.AG$par)*3, dimnames = list(c('A', 'AN', 'AS', 'AG'), rep(names(lk.AG$par), each = 3)))
+results = matrix(NA, nrow = 4, ncol = length(lk.AG$par)*3, dimnames = list(c('A', 'AN', 'AS', 'AG'),  paste(rep(names(lk.AG$par), each = 3), c('', 'low', 'high'), sep = '_') ))
 
 # Set column indices of best esimtates, low and high CIs
 best = seq(1, 42, by = 3)
@@ -31,6 +31,7 @@ results[3,high] = AS.CIs[2,]
 results[4,best] = lk.AG$par
 results[4,low] = AG.CIs[1,]
 results[4,high] = AG.CIs[2,]
+
 
 results = t(round(results, 2))
 

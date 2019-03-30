@@ -1,32 +1,30 @@
-# ###########################################
-# ### This script is designed to calculate likelihood profiles for all models
-# ###  fitted to INSIGHT data. Run on the Hoffman2 cluster at UCLA, using an array job
-# ##  INPUTS (defined in the .sh bash wrapper, parsed by "optparse" below)
-# ##     -outpath   - output file path
-# ##     -var       - array run number, used as indexing var in R script
-# ###########################################
-# 
-# ###########################################
-# ## Parse inputs from bash wrapper
-# ###########################################
-# library("optparse") # Load library
-# library("parallel")
-# option_list = list(
-#   # Set up ability to pass an output file path from bash to R
-#   make_option(c("-outpath", "--outpath"), type="character", default=NULL, 
-#               help="the path to your outpath", metavar="character"),
-#   # Set up ability to pass the run number from bash to R
-#   make_option(c("-var", "--var"), type = "integer", default = NULL, help="input index number")
-# ); 
-# 
-# opt_parser = OptionParser(option_list=option_list);
-# opt = parse_args(opt_parser); # Now you have a list called opt with entries opt$var (integer, run number), opt$outpath (character, output file path)
-# 
-# print(opt$outpath) # Print the output filepath from the cluster for checking
+###########################################
+### This script is designed to calculate likelihood profiles for all models
+###  fitted to INSIGHT data. Run on the Hoffman2 cluster at UCLA, using an array job
+##  INPUTS (defined in the .sh bash wrapper, parsed by "optparse" below)
+##     -outpath   - output file path
+##     -var       - array run number, used as indexing var in R script
+###########################################
 
-opt = list(outpath = 'cluster_outputs/test.txt', var = 22)
+###########################################
+## Parse inputs from bash wrapper
+###########################################
+library("optparse") # Load library
+library("parallel")
+option_list = list(
+  # Set up ability to pass an output file path from bash to R
+  make_option(c("-outpath", "--outpath"), type="character", default=NULL, 
+              help="the path to your outpath", metavar="character"),
+  # Set up ability to pass the run number from bash to R
+  make_option(c("-var", "--var"), type = "integer", default = NULL, help="input index number")
+); 
 
-aa = Sys.time()
+opt_parser = OptionParser(option_list=option_list);
+opt = parse_args(opt_parser); # Now you have a list called opt with entries opt$var (integer, run number), opt$outpath (character, output file path)
+
+#print(opt$outpath) # Print the output filepath from the cluster for checking
+
+
 
 ###########################################
 ## Load R inputs
@@ -93,6 +91,7 @@ prof_grid = function(pvec, fixpar, gridpoints, lows, highs, H1.protection, H3.pr
 ############################
 fitted_model = fits[[opt$var]] # Extract one model for which to run profiles
 model_name = gsub(pattern = 'lk.(\\w+)', replacement = '\\1', x = names(fits)[opt$var]) # Extract factor abbreviation from model's name
+print(paste(model_name))
 
 ## Set up lower and upper bounds for estimated free par values in each model. Vector changes depending on which free paramters are included in the model fit
 # mod.lows = .001 Always 0.001, hard code below
@@ -113,11 +112,11 @@ if(grepl('G', model_name)){modH1pro = prog1.master; modH3pro = prog2.master} # I
 ## Choices are centered around MLE for each parameter
 grid.list = list(rAV = seq(.4, 2, by = .005),
                  rDX = seq(.6, 1.5, by = .005),
-                 rVX.H1 = seq(.4, 1.3, by = .005),
+                 rVX.H1 = seq(.4, 1.3, by = .005), 
                  rVX.H3 = seq(.4, 1.3, by = .005),
                  rPro.H1 = seq(.3, 1.3, by = .005),
                  rPro.H3 = seq(.3, 1.3, by = .005),
-                 r18.24 = seq(.5, 1.5, by = .005),
+                 r18.24 = seq(.5, 1.5, by = .005), 
                  r25.31 = seq(.5, 1.5, by = .005),
                  r39.45 = seq(.5, 1.5, by = .005),
                  r46.52 = seq(.4, 1.4, by = .005),
@@ -141,11 +140,3 @@ clusterExport(cl, ls()) # Export all variables in workspace
 parLapply(cl = cl, X = names(fitted_model$par), 
           fun = function(xx){prof_grid(pvec = fitted_model$par, fixpar = xx, gridpoints = grid.list[[xx]], lows = .001, highs = mod.highs, H1.protection = modH1pro, H3.protection = modH3pro, modname = model_name)})
 stopCluster(cl)
-#detach(fits)
-
-print(paste(model_name, 'elapsed time =', Sys.time()-aa))
-
-
-aa = Sys.time()
-prof_grid(pvec = fitted_model$par, fixpar = 'r18.24', gridpoints = seq(.5, 1.5, by = .1), lows = .001, highs = mod.highs, H1.protection = modH1pro, H3.protection = modH3pro, modname = model_name)
-Sys.time() - aa

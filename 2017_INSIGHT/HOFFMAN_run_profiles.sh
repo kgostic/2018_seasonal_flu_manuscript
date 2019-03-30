@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -cwd
-#$ -l h_rt=02:00:00,h_data=20G
+#$ -l h_rt=04:00:00,h_data=20G
 #$ -N INSIGHT-profiles
 #$ -o /u/home/k/kgostic/seasonal_flu/2017_INSIGHT/.messages
 #$ -e /u/home/k/kgostic/seasonal_flu/2017_INSIGHT/.errors
@@ -29,9 +29,9 @@ then
 fi        
 
 ## Delete the current verion of the output file, so that all saved outputs are fresh
-if [ -e /u/home/k/kgostic/seasonal_flu/2017_INSIGHT/cluster_outputs/INSIGHT_profiles.txt ]
+if [ -e $outpath ]
 then
-    rm /u/home/k/kgostic/seasonal_flu/2017_INSIGHT/cluster_outputs/INSIGHT_profiles.txt
+    rm $outpath
     echo "removed old output file"
 else
     echo "creating new output file. No old file to delete."

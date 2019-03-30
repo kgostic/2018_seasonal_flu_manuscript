@@ -209,3 +209,73 @@ profile_function = function(pars, fixed.par.name, fixed.par.value, wAV, wDX, wVX
   lk.H1+lk.H3
   # end function 
 }
+
+
+
+
+### Write a version of the likelihood function that calculates imprinting protection strength during the 2009 pandemic
+###  THIS FUNCTION TAKES THE SAME INPUTS AND OUTPUTS AS NLL, ABOVE, EXCEPT...
+###       fitted.age.pars inputs the age pars fitted using non-pandemic data
+###         use these because there was not much H3N2 circulation during the pandemic
+###         --> no ability to estimate pandemic-specific age curve independent of subtype
+nll_pandemic = function(pars, fitted.age.pars, wAV, wDX, wVX, wPro.H1, dat.H1, a18.24, a25.31, a32.38, a39.45, a46.52, a53.59, a60.66, a67.73, a74.80, a81.90, tested.master){
+  # 1. Assign parameters to be fit
+  rAV = ifelse(is.na(fitted.age.pars['rAV']), 1, fitted.age.pars['rAV']) # Relative risk given antiviral use
+  rDX = ifelse(is.na(fitted.age.pars['rDX']), 1, fitted.age.pars['rDX']) # Relative risk given underlying symptoms
+  rVX.H1 = ifelse(is.na(fitted.age.pars['rVX.H1']), 1, fitted.age.pars['rVX.H1']) # Relative risk given vaccination
+  rPro.H1 = ifelse(is.na(pars['rPro.H1']), 1, pars['rPro.H1'])# Relative risk given imprinting protection
+  r18.24 = fitted.age.pars['r18.24'] # Baseline expectation for 18-24 year olds
+  r25.31 = fitted.age.pars['r25.31']
+  b =1 # Baseline risk (ages 32-38) are all fixed to 1. All other r##.## paramters represent relative risk, relative to baseline. The choice of baseline risk group is arbitrary. I chose the 32-38 age group, because they are usually at or near the highest risk, and it is somewhat easier to interpret relative risk estimates if they are all above or below 1.
+  r39.45 = fitted.age.pars['r39.45']
+  r46.52 = fitted.age.pars['r46.52'] 
+  r53.59 = fitted.age.pars['r53.59']
+  r60.66 = fitted.age.pars['r60.66'] 
+  r67.73 = fitted.age.pars['r67.73'] 
+  r74.80 = fitted.age.pars['r74.80'] 
+  r81.90 = fitted.age.pars['r81.90'] 
+
+  
+  ## Age-specific baseline prediction takes the same form for H1N1 and H3N2. Attempt to explain residual, subtype-specific differences through differences in imprinting history, etc. below.
+  age.risk = b*(r18.24*a18.24+
+                  r25.31*a25.31+ 
+                  a32.38+ 
+                  r39.45*a39.45+ 
+                  r46.52*a46.52+ 
+                  r53.59*a53.59+ 
+                  r60.66*a60.66+ 
+                  r67.73*a67.73+ 
+                  r74.80*a74.80+ 
+                  r81.90*a81.90)
+  age.risk = age.risk/rowSums(age.risk) # Normalize so that age specific risk prediction sums to 1 across all age groups.
+  
+  
+  # 2. calculate predicted distribution, pp, as a linear combination of age-specific risk, and other model factors.
+  # Risk prediction is a function of the estimated free parameters:
+  # This step gives the model predicted age distributions for H1N1 and H3N2
+  # No need to normalize the preditions so that probabilities of case observation sum to 1 across age groups. The dmultinom function (see step 3) will normalize predicted probabilities automatically.
+  pp.H1 = tested.master * age.risk * (wAV*rAV+(1-wAV))* (wDX*rDX+(1-wDX))* (wVX*rVX.H1+(1-wVX))* (wPro.H1*rPro.H1+(1-wPro.H1))
+  
+    #  3. Likelihood is based on the multinomial density
+  if(is.null(dim(dat.H1))){ #DO THIS IF DATA FROM ONE YEAR INPUT AS A VECTOR
+    lk.H1 = -dmultinom(dat.H1, size = sum(dat.H1), prob = pp.H1, log = TRUE) #This line returns the log multinomial density of the observed H1N1 data, with expected probabilities governed by model predictions.
+  }else{ #ELSE DO THIS IF MULTI-YEAR DATA INPUT IN A MATRIX
+    storage = vector('numeric', dim(dat.H1)[1])
+    for(jj in 1:dim(dat.H1)[1]){ #Find the neg log density for each row (dim 1) and take the sum
+      storage[jj] = -dmultinom(dat.H1[jj,], size = sum(dat.H1[jj,]), prob = pp.H1[jj,], log = TRUE)
+    }
+    lk.H1 = sum(storage) 
+  }
+   ## Sum the negative log likelihoods of the H1N1 and H3N2 data to get the full nll, and return
+ lk.H1  # end function 
+}
+
+## Write a function wrapper, so that you can optimize the likelihood, but only have to input a vector of initial par values and par value limits involved in model comparison
+nll.wrapper.pdm = function(pars.in, seasonal_fit, pro.H1){
+  ## Concatenate vector to initialize pars that may or may not be included, with a vector of all age pars (always included)
+  pvec = c(pars.in)
+  
+  optim(par = pvec, fn = nll_pandemic, fitted.age.pars = seasonal_fit, wAV = av.master_pandemic, wDX = dx.master_pandemic, wVX = vac.master_pandemic, wPro.H1 = prog1.master_pandemic, dat.H1 = H1.master_pandemic, a18.24 = a18.24_pandemic, a25.31 = a25.31_pandemic, a32.38 = a32.38_pandemic, a39.45 = a39.45_pandemic, a46.52 = a46.52_pandemic, a53.59 = a53.59_pandemic, a60.66 = a60.66_pandemic, a67.73 = a67.73_pandemic, a74.80 = a74.80_pandemic, a81.90 = a81.90_pandemic, tested.master = tested.master_pandemic/rowSums(tested.master_pandemic),
+        method = 'L-BFGS-B', lower = .001, upper = 1)
+}
+
