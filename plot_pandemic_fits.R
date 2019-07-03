@@ -5,7 +5,8 @@
 ##########################################
 rm(list = ls())
 
-outfile1 = 'figures/scratch/AZ_pandemic_fits.pdf'
+outfile1 = 'figures/AZ_pandemic_fits.pdf'
+outfile2 = 'figures/AZ_pandemic_resid.pdf'
 
 ## Temporarily switch to the 2017_AZ subdirectory and load AZ model fits, CIs and model inputs
 ## We will load the INISHGT inputs below, when we start that plot.
@@ -20,16 +21,18 @@ setwd('../')# Switch back into the home directory
 pdf(outfile1, width = 3)
 par(mfrow = c(3,1), mgp = c(2,1,0), mar = c(4,3,3,1))
 ## Plot the estimated relative risk given imprinting, as fitted to seasonal data
-plot(AZ_seasonal_ests, 1:3, col = c('dodgerblue', 'magenta', 'orange'), pch = 16, xlim = c(0, 1), ylim = c(.5, 3.5), xaxt = 'n', yaxt = 'n', ylab = '', bty = 'n', xlab = 'Relative risk given imprinting')
+plot(AZ_seasonal_ests, 1:3, col = c('limegreen', 'purple', 'dodgerblue'), pch = 16, xlim = c(0, 1), ylim = c(.5, 3.5), xaxt = 'n', yaxt = 'n', ylab = '', bty = 'n', xlab = 'Relative risk given imprinting')
 axis(1, at = seq(0, 1, by = .2))
 axis(2, at = 1:3, labels = c('AG', 'AN', 'AS'))     
-points(AZ_pandemic_ests, 1:3, col = c('dodgerblue', 'magenta', 'orange'), pch = 4)
-## Add seasonal CIs
-segments(x0 = AG.CIs[1,1], y0 = 1, x1 = AG.CIs[2,1], col = 'dodgerblue')
-segments(x0 = AN.CIs[1,1], y0 = 2, x1 = AN.CIs[2,1], col = 'magenta')
-segments(x0 = AS.CIs[1,1], y0 = 3, x1 = AS.CIs[2,1], col = 'orange')
-legend('topright', c('fitted to seasonal data', 'fitted to pandemic data'),  pch = c(16, 4), bty = 'n')
+points(AZ_firstwave_ests, 1:3, col = c('limegreen', 'purple', 'dodgerblue'), pch = 4)
+points(AZ_secondwave_ests, 1:3, col = c('limegreen', 'purple', 'dodgerblue'), pch = 5)
 
+## Add seasonal CIs
+segments(x0 = AG.CIs[1,1], y0 = 1, x1 = AG.CIs[2,1], col = 'limegreen')
+segments(x0 = AN.CIs[1,1], y0 = 2, x1 = AN.CIs[2,1], col = 'purple')
+segments(x0 = AS.CIs[1,1], y0 = 3, x1 = AS.CIs[2,1], col = 'dodgerblue')
+legend('topright', c('fitted to seasonal data', 'first pandemic wave', 'second pandemic wave'),  pch = c(16, 4, 5), bty = 'n')
+mtext(text = 'A', side = 3, line = 0, at =0, font = 2)
 
 
 ## Define a function to predict the age distribution of cases, given model paramters:
@@ -79,7 +82,11 @@ AZ_pdm_prediction = function(pars, fitted.age.pars,wPro.H1){
                       r67.73*a67.73+ 
                       r74.80*a74.80+ 
                       r81.90p*a81.90plus)
-  age.baseline = age.baseline/rowSums(age.baseline) # Normalize so that the fraction of cases predicted in each age group sums to 1 across all age groups
+  if(is.null(dim(age.baseline))){ # If only one row
+    age.baseline = age.baseline/sum(age.baseline)
+  }else{
+    age.baseline = age.baseline/rowSums(age.baseline)
+  }
   
   
   # 2. calculate predicted distribution, pp, as a function of the parameters:
@@ -92,31 +99,85 @@ AZ_pdm_prediction = function(pars, fitted.age.pars,wPro.H1){
 
 
 
-
-
 ## Plot the fits to data
-plot(2009:1918, (H1.master_2009[1,as.character(2009:1918)]), type = 'l', lwd = 2, xlab = 'birth year', ylab = 'cases', main = 'AZ, 2008-09')
-lines(2009:1918, AZ_pdm_prediction(pars = pandemic_AS$par, fitted.age.pars = lk.AS$par, wPro.H1 = proH1.master_2009)[1,], col = 'orange')
-lines(2009:1918, AZ_pdm_prediction(pars = pandemic_AN$par, fitted.age.pars = lk.AS$par, wPro.H1 = proN1.master_2009)[1,], col = 'magenta')
+xx = barplot(H1.master_2009[1,as.character(2009:1918)], xlab = 'birth year', ylab = 'cases', col = 'gray', border = 'gray')
+lines(xx, AZ_pdm_prediction(pars = firstwave_AS$par, fitted.age.pars = lk.AS$par, wPro.H1 = proH1.master_2009)[1,], col = 'dodgerblue')
+lines(xx, AZ_pdm_prediction(pars = firstwave_AN$par, fitted.age.pars = lk.AN$par, wPro.H1 = proN1.master_2009)[1,], col = 'purple')
 #lines(2009:1918, AZ_pdm_prediction(pars = lk.AS$par['rPro.H1'], fitted.age.pars = lk.AS$par, wPro.H1 = proH1.master_2009)[1,], col = 'brown1')
-lines(2009:1918, AZ_pdm_prediction(pars = pandemic_AG$par, fitted.age.pars = lk.AS$par, wPro.H1 = prog1.master_2009)[1,], col = 'dodgerblue')
+lines(xx, AZ_pdm_prediction(pars = firstwave_AG$par, fitted.age.pars = lk.AG$par, wPro.H1 = prog1.master_2009)[1,], col = 'limegreen')
+#lines(xx, AZ_pdm_prediction(pars = firstwave_AG$par*0+1, fitted.age.pars = lk.A$par, wPro.H1 = prog1.master_2009)[1,], col = 'yellow')
+legend('topright', c('data', expression(paste('AG fit, ', Delta, 'AIC=0.00')),
+                     expression(paste('AS fit, ', Delta, 'AIC=20.51')),
+                     expression(paste('AN fit, ', Delta, 'AIC=41.87'))),
+       col = c('gray', 'limegreen','dodgerblue', 'purple'), lwd = c(NA,1,1,1), bty = 'n', pch = c(15, NA, NA, NA))
+mtext(text = 'B', side = 3, line = 0, at = xx[1]-3, font = 2)
+
+
+
+xx = barplot(H1.master_2009[2,as.character(2009:1918)], xlab = 'birth year', ylab = 'cases', col = 'gray', border = 'gray')
+lines(xx, AZ_pdm_prediction(pars = secondwave_AS$par, fitted.age.pars = lk.AS$par, wPro.H1 = proH1.master_2009)[2,], col = 'dodgerblue')
+lines(xx, AZ_pdm_prediction(pars = secondwave_AN$par, fitted.age.pars = lk.AN$par, wPro.H1 = proN1.master_2009)[2,], col = 'purple')
+#lines(2009:1918, AZ_pdm_prediction(pars = lk.AS$par['rPro.H1'], fitted.age.pars = lk.AS$par, wPro.H1 = proH1.master_2009)[1,], col = 'brown1')
+lines(xx, AZ_pdm_prediction(pars = secondwave_AG$par, fitted.age.pars = lk.AG$par, wPro.H1 = prog1.master_2009)[2,], col = 'limegreen')
 #lines(2009:1918, AZ_pdm_prediction(pars = lk.AG$par['rPro.H1'], fitted.age.pars = lk.AS$par, wPro.H1 = proH1.master_2009)[1,], col = 'blue')
-legend('topleft', c('data', 'AS fit', 'AN fit', 'AG fit'), col = c('black', 'orange','magenta', 'dodgerblue'), lwd = c(2,1,1,1), bty = 'n')
-
-plot(2009:1918, (H1.master_2009[2,as.character(2009:1918)]), type = 'l', lwd = 2, xlab = 'birth year', ylab = 'cases', main = 'AZ, 2009-10')
-lines(2009:1918, AZ_pdm_prediction(pars = pandemic_AS$par, fitted.age.pars = lk.AS$par, wPro.H1 = proH1.master_2009)[2,], col = 'orange')
-lines(2009:1918, AZ_pdm_prediction(pars = pandemic_AS$par, fitted.age.pars = lk.AN$par, wPro.H1 = proN1.master_2009)[2,], col = 'magenta')
-#lines(2009:1918, AZ_pdm_prediction(pars = lk.AS$par['rPro.H1'], fitted.age.pars = lk.AS$par, wPro.H1 = proH1.master_2009)[2,], col = 'brown1')
-lines(2009:1918, AZ_pdm_prediction(pars = pandemic_AG$par, fitted.age.pars = lk.AS$par, wPro.H1 = prog1.master_2009)[2,], col = 'dodgerblue')
-#lines(2009:1918, AZ_pdm_prediction(pars = lk.AG$par['rPro.H1'], fitted.age.pars = lk.AS$par, wPro.H1 = proH1.master_2009)[2,], col = 'blue')
-legend('topleft', c('data', 'AS fit', 'AN fit', 'AG fit'), col = c('black', 'orange','magenta', 'dodgerblue'), lwd = c(2,1,1,1), bty = 'n')
-
+legend('topright', c('data', expression(paste('AN fit, ', Delta, 'AIC=0.00')),
+                     expression(paste('AS fit, ', Delta, 'AIC=17.69')),
+                     expression(paste('AG fit, ', Delta, 'AIC=271.68'))),
+                     col = c('gray', 'purple','dodgerblue', 'limegreen'), lwd = c(NA,1,1,1), bty = 'n', pch = c(15, NA, NA, NA))
+mtext(text = 'C', side = 3, line = 0, at = xx[1]-3, font = 2)
 dev.off()
+
+
+
+### Do plot for EEID
+{
+pdf('EEID_2019.pdf')
+par(mfrow = c(3,1), mar = c(3,3,1,1))
+xx= barplot(rbind(proH3.master_2009[1,as.character(2009:1918)], 
+              proH1.master_2009[1,as.character(2009:1918)],
+              prog1.master_2009[1,as.character(2009:1918)]-proH1.master_2009[1,as.character(2009:1918)]),
+              col = (c('firebrick1','dodgerblue','lightblue2')), border = NA, space = 0)
+axis(side = 1, at = xx[seq(1, length(xx), by = 10)], labels = NA)
+xx= barplot(H1.master_2009[1,as.character(2009:1918)], xlab = 'birth year', ylab = 'cases', col = 'dodgerblue', border = 'dodgerblue')
+#lines(xx, AZ_pdm_prediction(pars = firstwave_AS$par*0+1, fitted.age.pars = lk.A$par, wPro.H1 = proH1.master_2009*0+1)[1,], col = 'black')
+lines(smooth.spline(xx, colSums(H1.master[,as.character(2009:1918)])/sum(H1.master[,as.character(2009:1918)])*sum(H1.master_2009[1,as.character(2009:1918)])), col = 'black')
+axis(side = 1, at = xx[seq(1, length(xx), by = 10)], labels = NA)
+
+xx= barplot(H1.master_2009[2,as.character(2009:1918)], xlab = 'birth year', ylab = 'cases', col = 'dodgerblue', border = 'dodgerblue')
+#lines(xx, AZ_pdm_prediction(pars = firstwave_AS$par*0+1, fitted.age.pars = lk.A$par, wPro.H1 = proH1.master_2009*0+1)[1,], col = 'black')
+lines(smooth.spline(xx, colSums(H1.master[,as.character(2009:1918)])/sum(H1.master[,as.character(2009:1918)])*sum(H1.master_2009[2,as.character(2009:1918)])), col = 'black')
+axis(side = 1, at = xx[seq(1, length(xx), by = 10)], labels = NA)
+dev.off()
+}
 
 
 ## Write the del.AIC values to tables
 write.csv(x = round(del.AIC,2), file = 'AZ_seasonal_AICs.csv')
 write.csv(x = round(pdm.del.AIC,2), file = 'AZ_pandemic_AICs.csv')
+
+
+
+pdf(outfile2, width = 5, height = 5)
+par(mfrow = c(2,1), mar = c(3,3,2,2), mgp = c(2,1,0))
+AA = AZ_pdm_prediction(pars = firstwave_AG$par*0+1, fitted.age.pars = lk.A$par, wPro.H1 = prog1.master_2009)
+xx = barplot(H1.master_2009[1,as.character(2009:1918)]-AA[1,], xlab = 'birth year', ylab = 'excess cases', col = 'gray', border = 'black', ylim = c(-90, 130), main = '')
+axis(side = 1, at = xx[seq(1, length(xx), by = 10)], labels = NA)
+pdmxx = xx[which((2009:1918)%in%c(1977, 1968, 1957))]
+abline(v = pdmxx, lty = 2)
+text(x = pdmxx-2, 100, labels = c('1977', '1968', '1957'), srt = 90)
+
+xx = barplot(H1.master_2009[2,as.character(2009:1918)]-AA[2,], xlab = 'birth year', ylab = 'excess cases', col = 'gray', border = 'black', ylim = c(-90, 130))
+axis(side = 1, at = xx[seq(1, length(xx), by = 10)], labels = NA)
+abline(v = pdmxx, lty = 2)
+text(x = pdmxx-2, 100, labels = c('1977', '1968', '1957'), srt = 90)
+dev.off()
+
+AA = AZ_pdm_prediction(pars = firstwave_AG$par, fitted.age.pars = lk.AG$par, wPro.H1 = prog1.master_2009)[1,]
+xx = barplot(H1.master_2009[1,as.character(2009:1918)]-AA, xlab = 'birth year', ylab = 'excess cases', col = 'gray', border = 'black', ylim = c(-90, 130), main = '')
+axis(side = 1, at = xx[seq(1, length(xx), by = 10)], labels = NA)
+pdmxx = xx[which((2009:1918)%in%c(1977, 1968, 1957))]
+abline(v = pdmxx, lty = 2)
+text(x = pdmxx-2, 100, labels = c('1977', '1968', '1957'), srt = 90)
 
 
 
@@ -176,3 +237,9 @@ legend(.4, 26.5, c('fitted to seasonal data', 'fitted to pandemic data'),  pch =
 ## Write the del.AIC values to tables
 write.csv(x = round(del.AIC,2), file = 'INSIGHT_seasonal_AICs.csv')
 write.csv(x = round(del.pdmAIC,2), file = 'INSIGHT_pandemic_AICs.csv')
+
+
+
+
+
+

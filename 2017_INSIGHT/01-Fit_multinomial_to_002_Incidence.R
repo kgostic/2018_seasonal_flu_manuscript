@@ -156,6 +156,8 @@ lk.A = nll.wrapper(pars.in = NULL, pro.H1 = 1, pro.H3 = 1, lower.in = NULL, uppe
 
 ## Pull out the variable names that store likelihoods
 mods = mget(ls(pattern = "lk."))
+## Drop degenerate models
+mods[sapply(mods, FUN = function(mm){any(mm$par == 1)})] # This is not identical to its simplified nested form. No need to drop any.
 nlls = numeric(length(mods))
 AICs = numeric(length(mods))
 for(ii in 1:length(mods)){
@@ -176,13 +178,31 @@ del.AIC
 # S = subtype
 # N = neuraminidase
 
+## Calculate akaike weights
+raw.weights = exp(-.5*del.AIC)
+AIC.weights = raw.weights/sum(raw.weights)
+AIC.weights
+
+## Summarize weights by imprinting type
+imp.type = sub(pattern = "lk.\\w+?([NGS?])", replacement = "\\1", names(AIC.weights))
+imp.type[grep('lk.', imp.type)] = 'none'
+
+## Figure out how much weight each type gets
+imp.type.weights = sapply(c('N', 'S', 'G', 'none'), FUN = function(tt){
+  valid = AIC.weights[imp.type == tt]
+  sum(valid)
+})
+
+names(imp.type.weights) = c('NA subtype', 'HA subtype', 'HA group', 'no imprinting')
+pie(sort(imp.type.weights), col = c('aquamarine','white', 'gray', 'limegreen'), main = 'Akaike weights')
+INSIGHT.wts = imp.type.weights
 
 
 #####################
 ## save fitted models
 #####################
 fits = mget(ls(pattern = 'lk.\\w+'))
-save(fits, del.AIC, file = outfile1)
+save(fits, del.AIC, AIC.weights, imp.type.weights, file = outfile1)
 
 
 

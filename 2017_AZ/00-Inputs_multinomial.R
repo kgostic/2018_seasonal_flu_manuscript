@@ -21,10 +21,13 @@ raw.dat = rbind(raw.dat, read.csv('raw-data/AZ_flu_surveillance_13-14.csv'))
 raw.dat = rbind(raw.dat, read.csv('raw-data/AZ_flu_surveillance_14-15.csv'))
 ## Exclude one case whose birth year is mis-entered
 raw.dat = raw.dat[-364, ]
+## Calculate age for plotting
+raw.dat$year = as.numeric(gsub(raw.dat$SEASON, pattern = '(\\d{4})\\d{2}', replacement = '\\1'))
+raw.dat$age = raw.dat$year+1 - raw.dat$BIRTHYEAR
 
 
 
-names(raw.dat) = c('season', 'birthyear', 'subtype')
+names(raw.dat) = c('season', 'birthyear', 'subtype', 'year', 'age')
 ## Exclude cases born before 1918 (imprinting history not known, and there are few cases)
 raw.dat = raw.dat[-which(raw.dat$birthyear < 1918), ]
 write.csv(raw.dat, file = 'processed-data/AZ_seasonal_linelist.csv', row.names = FALSE)
@@ -62,6 +65,7 @@ load('../../Reconstructions/AZ_weights_2018-11-29.RData')
 ## weights[[3]] gives probs of H3N2 imrinting
 ## weights[[4]] gives probabilities of remaining naive. This only takes non-zero probabilities in cohorts under age 13.
 proH1.master = weights[[1]][,as.character(2015:1918)] # Individuals who imprinted to H1N1 will be protected against H1N1 at the HA subtype level
+proH2.master = weights[[2]][,as.character(2015:1918)]
 proH3.master = weights[[3]][,as.character(2015:1918)] # Individuals who imprinted to H3N2 will be protected against H3N2 at the HA subtype level
 prog1.master = weights[[1]][,as.character(2015:1918)]+weights[[2]][,as.character(2015:1918)] # Individuals who imprinted to H1N1 OR H2N2 will be protected against H1N1 at the HA group level
 prog2.master = proH3.master # Individuals who imprinted to H3N2 will be protected against H3N2 at the HA group level
@@ -156,6 +160,7 @@ proN1.master = proN1.master[-c(9,10), ]
 H3.master = H3.master[-c(9,10), ]
 prog2.master = prog2.master[-c(9,10), ]
 proH3.master = proH3.master[-c(9,10), ]
+proH2.master = proH2.master[-c(9,10), ]
 proN2.master = proN2.master[-c(9,10), ]
 
 

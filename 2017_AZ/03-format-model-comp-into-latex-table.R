@@ -6,9 +6,11 @@ load('processed-data/AZ_model_fits.RData')
 load('processed-data/AZ_profiles.RData')
 
 outfile1 = 'processed-data/AZ_results_table.csv'
+outfile2 = 'processed-data/AIC_AZ.csv'
+outfile3 = 'processed-data/Formatted_AZ_results.csv'
 
 # Initialize matris
-results = matrix(NA, nrow = 4, ncol = length(lk.AG$par)*3, dimnames = list(c('A', 'AN', 'AS', 'AG'),  paste(rep(names(lk.AG$par), each = 3), c('', 'low', 'high'), sep = '_') ))
+results = matrix(NA, nrow = 4, ncol = length(lk.AG$par)*3, dimnames = list(c('A', 'AN', 'AS', 'AG'),  paste(rep(names(lk.AG$par), each = 3), c('best', 'low', 'high'), sep = '_') ))
 
 # Set column indices of best esimtates, low and high CIs
 best = seq(1, 42, by = 3)
@@ -35,4 +37,16 @@ results[4,high] = AG.CIs[2,]
 
 results = t(round(results, 2))
 
-write.csv(results, file = outfile1, row.names = FALSE)
+write.csv(results, file = outfile1)
+write.csv(del.AIC, file = outfile2)
+
+## Write function to fomat table S1
+fmt = function(rn){
+  paste(results[rn,], " (", results[rn+1, ],"-", results[rn+2, ], ")", sep = "")
+}
+
+formatted = t(sapply(X = best, FUN = fmt))
+colnames(formatted) = colnames(results)
+rownames(formatted) = names(lk.AG$par)
+write.csv(formatted, file = outfile3)
+

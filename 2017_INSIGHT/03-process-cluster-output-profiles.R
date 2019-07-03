@@ -7,7 +7,7 @@ library(reshape)
 library(dplyr)
 library(tidyr)
 # Import a long-form text file of all profiles
-long_pro = as.data.frame(read.table('cluster_outputs/INSIGHT_profiles.txt'))
+long_pro = as.data.frame(read.table('cluster_outputs/INSIGHT_profiles.txt', stringsAsFactors = FALSE))
 #long_pro = as.data.frame(read.table('cluster_outputs/test.txt'))
 # Add column names
 names(long_pro) = c('grid.val', 'prof.nll', 'modname', 'parname', 'date')
@@ -16,8 +16,9 @@ names(long_pro) = c('grid.val', 'prof.nll', 'modname', 'parname', 'date')
 #### OUTPUTS
 outfile1 = 'processed-data/INSIGHT_par_ests_CIs.csv'
 outfile2 = 'processed-data/INSIGHT_formatted_fits_table.csv'
+outfile3 = 'processed-data/AIC_INSIGHT.csv'
 
-
+write.csv(del.AIC, file = outfile3)
 
 
 ################################
@@ -36,19 +37,20 @@ parmat = as.data.frame(parmat)
 parmat$modname = gsub(pattern = 'lk.(\\w+)', replacement = "\\1", rownames(parmat))
 
 ## Melt the data frame
-long_parmat = melt(as.data.frame(parmat), id.vars = c('nll', 'delAIC', 'modname'))
+long_parmat = melt(as.data.frame(parmat), id.vars = c('nll', 'delAIC', 'modname'), variable_name = 'parname')
+## remove pars that don't exist in the model of interest
+long_parmat = subset(long_parmat, !is.na(value))
 
-
-# # Plot profiles
-# for(mm in parmat$modname){
-# pp = ggplot()+
-#   geom_point(data = subset(long_pro, modname == mm), aes(x = grid.val, y = prof.nll))+
-#   geom_point(data = subset(long_parmat, modname == mm), aes(x = value, y = nll), color = 'red')+
-#   geom_vline(data = subset(long_parmat, modname == mm), aes(xintercept = value), color = 'red')+
-#   facet_wrap(~parname)
-# ggsave(filename = paste('scratch-figures/checkINSIGHTprofs_', mm, '.pdf', sep = ""), plot = pp)
-# }
-# #These all look good except that a few are missing
+# Plot profiles
+for(mm in parmat$modname){
+pp = ggplot()+
+  geom_point(data = subset(long_pro, modname == mm), aes(x = grid.val, y = prof.nll))+
+  geom_point(data = subset(long_parmat, modname == mm), aes(x = value, y = nll), color = 'red')+
+  geom_vline(data = subset(long_parmat, modname == mm), aes(xintercept = value), color = 'red')+
+  facet_wrap(~parname)
+ggsave(filename = paste('scratch-figures/checkINSIGHTprofs_', mm, '.pdf', sep = ""), plot = pp)
+}
+#These all look good except that a few are missing
 
 
 
@@ -97,7 +99,7 @@ LR.CI(threshold = LR.Threshold(NLL_best = parmat[paste('lk.', mod.in, sep = ''),
 }
 
 ## Apply the wrapper across each row in the modparlist
-CIs=mapply(FUN = LR.CI.wrapper, mod.in = modparlist[,'modname'], par.in = modparlist[,'variable'])
+CIs=mapply(FUN = LR.CI.wrapper, mod.in = modparlist[,'modname'], par.in = modparlist[,'parname'])
 rownames(CIs) = c('low', 'high')
 
 ## Add to modparlist
@@ -123,16 +125,16 @@ pasted = paste(sprintf('%.2f', modparlist$value), ' (', sprintf('%.2f', modparli
 
 modparlist$pasted = pasted
 # Extract variables of interest
-longouts = modparlist[,c('modname', 'variable', 'pasted')]
+longouts = modparlist[,c('modname', 'parname', 'pasted')]
 # Add del.AIC as a variable
-das = data.frame(modname = modparlist$modname, variable = rep('delAIC', nrow(modparlist)), pasted = modparlist$delAIC)
+das = data.frame(modname = modparlist$modname, parname = rep('delAIC', nrow(modparlist)), pasted = modparlist$delAIC)
 #prune duplicates
 das = unique(das)
 das$pasted = sprintf('%.02f', das$pasted)
 longouts = rbind(longouts, das)
 
 # wide format into a table
-outs = spread(data = longouts, variable, pasted)
+outs = spread(data = longouts, parname, pasted)
 # Sort by del.AIC
 outs = outs[order(as.numeric(outs$delAIC)), ]
 outs = t(outs)
@@ -163,3 +165,4 @@ pie(sort(imp.type.weights), col = c('aquamarine','white', 'gray', 'limegreen'), 
 
 length(parmat[1,])
 paste(parmat[1,], 1:16)
+

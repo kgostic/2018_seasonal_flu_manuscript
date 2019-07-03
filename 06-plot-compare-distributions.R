@@ -1,7 +1,8 @@
 rm(list = ls())
 library(reshape)
-setwd('~/Dropbox/R/2017_INSIGHT/')
+setwd('~/Dropbox/R/2018_seasonal_flu/2017_INSIGHT/')
 source('00-Import_FLU002_-for-multinomial.R')
+setwd('../')
 
 ## Plot observed age distributions of infection using the INSIGHT 002 data set
 ## Repeat using the AZ data set
@@ -41,6 +42,9 @@ outfile9 = 'figures/age-dists-by-season-ARIZONA-hilowsmoothpar.pdf' ## Supplemen
 agerange = 18:90
 age.tab = function(agevec){sapply(agerange, FUN = function(aa) sum(agevec == aa))}
 
+## Drop data from the 2009 pandemic
+dat.002 = subset(dat.002, !season %in% c('NH.09.10', 'SH.10'))
+
 ## Plot only countries and subtypes for which at least 50 cases were observed of each subtype
 tb = (table(dat.002$country, dat.002$flutype)) # Get counts for each country, H1N1 = 1, H3N2 = 2
 include = rownames(tb)[which(tb[,1]>=50 & tb[,2]>=50)]
@@ -78,8 +82,8 @@ tns <- function(colname, percent = 70) {
   layout(matrix(c(1,8,2,  8,3,4,  5,6,7), byrow = T, nrow = 3))
   par(mfrow = c(4,3))
   ## Overall
-  valid1 = subset(dat.002,flutype == "1")
-  valid2 = subset(dat.002,flutype == "2")
+  valid1 = subset(dat.002,flutype == "1" & season!='NH.09.10' & season!='SH.10')
+  valid2 = subset(dat.002,flutype == "2" & season!='NH.09.10' & season!='SH.10')
   plot(agerange, age.tab(valid1$age)/nrow(valid1), xlab = '', ylab = '', xlim = c(18, 90), ylim = c(0, .085), main = '', col = tns('dodgerblue'), xpd = NA)
   mtext(text = 'age', side = 1, line = 1.9, cex = .8)
   mtext(text = 'fraction', side = 2, line = 1.9, cex = .8)
@@ -366,7 +370,7 @@ dev.off()
   
   par(mfrow = c(4,4))
   ssns = unique(dat.002$season) # GEt all country names
-  ssns = ssns[-16] # #xclude SH.17 where no confirmed cases were observed
+  ssns = ssns[-14] # #xclude SH.17 where no confirmed cases were observed
   ## Exclude Portugal, which only reported negative cases
   labs = LETTERS[1:20]; names(labs) = c(ssns)
   
@@ -414,9 +418,9 @@ dev.off()
 ###################################
 ## Repeat for AZ data
 ###################################
-setwd('../2017_seasonal_flu/')## Change directories to import AZ data
+setwd('2017_AZ/')## Change directories to import AZ data
 source('00-Inputs_multinomial.R')
-setwd('../2017_INSIGHT/') ## Change back
+setwd('../') ## Change back
 
 ## Rename seasons for plotting
 raw.dat$season = gsub(pattern = '(\\d{4})(\\d{2})', replacement = '\\1-20\\2', x = raw.dat$season)
@@ -432,9 +436,12 @@ age.tab = function(agevec){sapply(agerange, FUN = function(aa) sum(agevec == aa)
 ##  Plot splines only if 50 or more cases were observed
 tb = (table(raw.dat$season, raw.dat$subtype)) # Get counts for each country, H1N1 = 1, H3N2 = 2
 include = rownames(tb)[which(rowSums(tb)>0)]
+include = include[-which(include %in% c('2008-2009', '2009-2010'))]
+
 ## Extract data from countries to be included
 azplotdat = subset(raw.dat, season %in% include & age %in% agerange)
 ssns = unique(azplotdat$season)
+
 {
   pdf(outfile6, width = 6.5, height = 10)
   ## Set smoothing paramter
@@ -485,17 +492,11 @@ ssns = unique(azplotdat$season)
 ## Alternate version of the main text figure, except
 ## Plot with all ages (0-90)
 ## Extract data from seasons wtih more than 50 observations of each subtype
-tb = (table(raw.dat$season, raw.dat$subtype)) # Get counts for each country, H1N1 = 1, H3N2 = 2
-include = rownames(tb)[which(tb[,1]>=50 & tb[,2]>=50)]
-## Extract data from countries to be included
-azplotdat = subset(raw.dat, season %in% include & age %in% agerange)
-ssns = unique(azplotdat$season)
 {
-  pdf(outfile7, width = 6.5)
+  pdf(outfile7, width = 6.5, height = 4.5)
   ## Set smoothing paramter
-  layout(matrix(c(1,8,2, 9,3,4, 5,6,7), byrow = T, nrow = 3))
-  par(mar = c(0,3,2.5,0))
-  labs = LETTERS[1:10]; names(labs) = c(NA, ssns)
+  #layout(matrix(c(1,8,2, 9,3,4, 5,6,7), byrow = T, nrow = 3))
+  par(mfrow = c(2,3),mar = c(1,3,2.5,0))
   ## Overall
   valid1 = subset(azplotdat,subtype == "H1")
   valid2 = subset(azplotdat,subtype == "H3")
@@ -513,7 +514,17 @@ ssns = unique(azplotdat$season)
   ss = smooth.spline(agerange, age.tab(valid2$age)/nrow(valid2), spar = spar.in)
   lines(ss$x, ss$y, col = 'firebrick')
   
-  par(mar = c(2,1.5,2,1)+1.5)
+  ## Extract focal seasons
+  tb = (table(raw.dat$season, raw.dat$subtype)) # Get counts for each country, H1N1 = 1, H3N2 = 2
+  include = rownames(tb)[which(tb[,1]>=50 & tb[,2]>=50)]
+  include = include[-which(include %in% c('2008-2009', '2009-2010'))] # exclude pandemic seasons
+  ## Extract data from countries to be included
+  azplotdat = subset(raw.dat, season %in% include & age %in% agerange)
+  ssns = unique(azplotdat$season)
+  labs = LETTERS[1:10]; names(labs) = c(NA, ssns)
+  
+  
+  par(mar = c(2,2,2,0)+1.5)
   for(ss in ssns){
     valid1 = subset(azplotdat, season == ss & subtype == "H1")
     valid2 = subset(azplotdat, season == ss & subtype == "H3")
@@ -538,60 +549,6 @@ ssns = unique(azplotdat$season)
   dev.off()
 }
 
-
-##### repeat wtih ages 18:90, which matches the INSIGHT data
-agerange = 18:90
-## Extract data from seasons wtih more than 50 observations of each subtype
-tb = (table(raw.dat$season, raw.dat$subtype)) # Get counts for each country, H1N1 = 1, H3N2 = 2
-include = rownames(tb)[which(tb[,1]>=50 & tb[,2]>=50)]
-## Extract data from countries to be included
-azplotdat = subset(raw.dat, season %in% include & age %in% agerange)
-ssns = unique(azplotdat$season)
-
-{
-  pdf(outfile8, width = 6.5)
-  ## Set smoothing paramter
-  layout(matrix(c(1,8,2, 9,3,4, 5,6,7), byrow = T, nrow = 3))
-  par(mar = c(0,3,2.5,0))
-  ## Overall
-  valid1 = subset(azplotdat,subtype == "H1")
-  valid2 = subset(azplotdat,subtype == "H3")
-  plot(agerange, age.tab(valid1$age)/nrow(valid1), xlab = '', ylab = '', xlim = c(18, 90), ylim = c(0, .085), main = '', col = tns('dodgerblue'), xpd = NA)
-  mtext(text = 'age', side = 1, line = 1.9, cex = .8)
-  mtext(text = 'fraction', side = 2, line = 1.9, cex = .8)
-  mtext(text = 'Overall', side = 3, line = .25, font = 2)
-  #text(x = 75, y = .08, paste( 'H1N1, n = ', nrow(valid1), '\nH3N2, n = ', nrow(valid2)), cex = .9)
-  legend('topright', legend = paste(c('H1N1: n = ', 'H3N2: n = '), c(nrow(valid1), nrow(valid2)), sep = ''), col = c('dodgerblue', 'firebrick'), pch = 15, bty = 'n')
-  ## add smoothed density
-  ss = smooth.spline(agerange, age.tab(valid1$age)/nrow(valid1), spar = spar.in)
-  lines(ss$x, ss$y, col = 'dodgerblue')
-  points(agerange, age.tab(valid2$age)/nrow(valid2), col = tns('firebrick'))
-  ss = smooth.spline(agerange, age.tab(valid2$age)/nrow(valid2), spar = spar.in)
-  lines(ss$x, ss$y, col = 'firebrick')
-  
-  par(mar = c(2,1.5,2,1)+1.5)
-  for(ss in ssns){
-    valid1 = subset(azplotdat, season == ss & subtype == "H1")
-    valid2 = subset(azplotdat, season == ss & subtype == "H3")
-    plot(agerange, age.tab(valid1$age)/nrow(valid1), xlab = '', ylab = '', xlim = c(18, 90), ylim = c(0, .085), main = '', col = tns('dodgerblue'))
-    mtext(text = 'age', side = 1, line = 1.9, cex = .8)
-    mtext(text = 'fraction', side = 2, line = 1.9, cex = .8)
-    mtext(text = paste(ss), side = 3, line = .25, font = 2, cex = .9)
-    legend('topright', legend = paste(c('H1N1: n = ', 'H3N2: n = '), c(nrow(valid1), nrow(valid2)), sep = ''), col = c('dodgerblue', 'firebrick'), pch = 15, bty = 'n')
-    if(nrow(valid1) >0){# If cases of this subtype were observed in the country of interest...
-      ## Add smoothing spline
-      zz = smooth.spline(agerange, age.tab(valid1$age)/nrow(valid1), spar = spar.in)
-      lines(zz$x, zz$y, col = 'dodgerblue')
-    }
-    if(nrow(valid2)>0){
-      ## Plot H3N2 age spline
-      points(agerange, age.tab(valid2$age)/nrow(valid2), col = tns('firebrick'))
-      zz = smooth.spline(agerange, age.tab(valid2$age)/nrow(valid2), spar = spar.in)
-      lines(zz$x, zz$y, col = 'firebrick')
-    }
-  }
-  dev.off()
-}
 
 
 
@@ -630,6 +587,7 @@ ssns = unique(azplotdat$season)
       lines(zz$x, zz$y, col = 'firebrick')
     }
   }
+  plot.new()
   ## Repeat with a high smoothpar value
   labs = LETTERS[7:12]; names(labs) = ssns
   for(ss in ssns){
@@ -656,6 +614,64 @@ ssns = unique(azplotdat$season)
   dev.off()
 }
 
+
+
+
+
+##### repeat wtih ages 18:90, which matches the INSIGHT data
+agerange = 18:90
+## Extract data from seasons wtih more than 50 observations of each subtype
+tb = (table(raw.dat$season, raw.dat$subtype)) # Get counts for each country, H1N1 = 1, H3N2 = 2
+include = rownames(tb)[which(tb[,1]>=50 & tb[,2]>=50)]
+include = include[-2] # Exclude pandemic seasons
+## Extract data from countries to be included
+azplotdat = subset(raw.dat, season %in% include & age %in% agerange)
+ssns = unique(azplotdat$season)
+
+{
+  pdf(outfile8, width = 6.5, height = 6)
+  ## Set smoothing paramter
+  #layout(matrix(c(1,8,2, 9,3,4, 5,6,7), byrow = T, nrow = 3))
+  par(mfrow = c(2,3), mar = c(1.5,3,2.5,0))
+  ## Overall
+  valid1 = subset(azplotdat,subtype == "H1")
+  valid2 = subset(azplotdat,subtype == "H3")
+  plot(agerange, age.tab(valid1$age)/nrow(valid1), xlab = '', ylab = '', xlim = c(18, 90), ylim = c(0, .085), main = '', col = tns('dodgerblue'), xpd = NA)
+  mtext(text = 'age', side = 1, line = 1.9, cex = .8)
+  mtext(text = 'fraction', side = 2, line = 1.9, cex = .8)
+  mtext(text = 'Overall', side = 3, line = .25, font = 2)
+  #text(x = 75, y = .08, paste( 'H1N1, n = ', nrow(valid1), '\nH3N2, n = ', nrow(valid2)), cex = .9)
+  legend('topright', legend = paste(c('H1N1: n = ', 'H3N2: n = '), c(nrow(valid1), nrow(valid2)), sep = ''), col = c('dodgerblue', 'firebrick'), pch = 15, bty = 'n')
+  ## add smoothed density
+  ss = smooth.spline(agerange, age.tab(valid1$age)/nrow(valid1), spar = spar.in)
+  lines(ss$x, ss$y, col = 'dodgerblue')
+  points(agerange, age.tab(valid2$age)/nrow(valid2), col = tns('firebrick'))
+  ss = smooth.spline(agerange, age.tab(valid2$age)/nrow(valid2), spar = spar.in)
+  lines(ss$x, ss$y, col = 'firebrick')
+  
+  par(mar = c(2,2,2,0)+1.5)
+  for(ss in ssns){
+    valid1 = subset(azplotdat, season == ss & subtype == "H1")
+    valid2 = subset(azplotdat, season == ss & subtype == "H3")
+    plot(agerange, age.tab(valid1$age)/nrow(valid1), xlab = '', ylab = '', xlim = c(18, 90), ylim = c(0, .085), main = '', col = tns('dodgerblue'))
+    mtext(text = 'age', side = 1, line = 1.9, cex = .8)
+    mtext(text = 'fraction', side = 2, line = 1.9, cex = .8)
+    mtext(text = paste(ss), side = 3, line = .25, font = 2, cex = .9)
+    legend('topright', legend = paste(c('H1N1: n = ', 'H3N2: n = '), c(nrow(valid1), nrow(valid2)), sep = ''), col = c('dodgerblue', 'firebrick'), pch = 15, bty = 'n')
+    if(nrow(valid1) >0){# If cases of this subtype were observed in the country of interest...
+      ## Add smoothing spline
+      zz = smooth.spline(agerange, age.tab(valid1$age)/nrow(valid1), spar = spar.in)
+      lines(zz$x, zz$y, col = 'dodgerblue')
+    }
+    if(nrow(valid2)>0){
+      ## Plot H3N2 age spline
+      points(agerange, age.tab(valid2$age)/nrow(valid2), col = tns('firebrick'))
+      zz = smooth.spline(agerange, age.tab(valid2$age)/nrow(valid2), spar = spar.in)
+      lines(zz$x, zz$y, col = 'firebrick')
+    }
+  }
+  dev.off()
+}
 
 
 

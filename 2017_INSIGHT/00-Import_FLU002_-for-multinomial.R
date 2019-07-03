@@ -81,7 +81,6 @@ rm(ssn) # Tidy up
 
 ## Pull out variables used in model
 dat.002 = subset(dat.002, select = c('age', 'anyvac', 'anydx', 'anyav', 'season', 'country', 'season', 'flutype', 'year', 'num_month'))
-nrow(dat.002) -> original
 
 ## Drop rows with missing data:
 paste('Dropping', sum((apply(dat.002, MARGIN = 1,  function(xx) (any(is.na(xx)))))), 'rows with NA')
@@ -97,8 +96,6 @@ dat.002 = dat.002[-invalid,]
 paste('Dropping', length(invalid), 'cases under age 18.')
 ## Exclude cases with unknown flutype or coinfection
 dat.002 = subset(dat.002, flutype %in% c(1,2,3,4))
-paste('Excluded', original-nrow(dat.002), 'total cases with missing info from dat.002')
-## Save cleaned data set
 write.csv(dat.002, outfile1, row.names = FALSE)
 
 ## Check data

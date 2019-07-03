@@ -7,18 +7,21 @@ library(lubridate)
 library(ggplot2)
 library(ggpubr)
 library(reshape2)
+library(gridExtra)
 setwd('~/Dropbox/R/2018_seasonal_flu/2017_AZ/')
 
+## Set the minimum number of cases per year to include in analysis
+min.obs = 100
 
 ## OUTPUTS
+outfile2 = '../figures/bedford_neher_aa_scaling.pdf'
 
 
 #######################################
 ## Load data, model inputs, and likelihood function
 ######################################
-source('00-Inputs_multinomial.R')
 ## Load nextstrain antigenic advace data
-H3N2_aa = read.table(file = 'nextstrain_data/nextstrain_staging_flu_seasonal_h3n2_ha_21y_metadata.tsv', sep = "\t", header = TRUE)
+H3N2_aa = read.delim(file = 'nextstrain_data/nextstrain_staging_flu_seasonal_h3n2_ha_21y_metadata.tsv', sep = "\t", header = TRUE)
 H1N1_aa_post2009 = read.table(file = 'nextstrain_data/nextstrain_flu_seasonal_h1n1pdm_ha_12y_metadata.tsv', sep = "\t", header = TRUE)
 H1N1_aa_pre2009 = read.table(file = "nextstrain_data/elife-01914-fig3-data1-v1.tsv", sep = '\t', header = TRUE) 
 H3N2_aa_bedford_elife = subset(H1N1_aa_pre2009, lineage == 'H3N2')
@@ -37,22 +40,29 @@ H1N1_aa_pre2009$decimal.date[replace] = H1N1_aa_pre2009$year[replace]
 ##  Use paired H3N2 estimates to re-scale the Bedford et al. estimates to match nextstrain estimates
 ## First, find the mean antigenic location along dimension 1 (Bedford et al) per year
 bedford_H3N2_yearly = sapply(1997:2011, function(xx){valid = H3N2_aa_bedford_elife$year == xx; mean(H3N2_aa_bedford_elife$ag1[valid])}); names(bedford_H3N2_yearly) = 1997:2011
-##  Repeat for Neher et al
-neher_H3N2_yearly = sapply(1997:2011, function(xx){valid = floor(H3N2_aa$Num.Date) == xx; mean(H3N2_aa$CTiter[valid], na.rm = TRUE)})
+##  Repeat for Nextstrain data
+## Tree model
+neher_H3N2_yearly_tree = sapply(1997:2011, function(xx){valid = floor(H3N2_aa$Num.Date) == xx; mean(H3N2_aa$CTiter[valid], na.rm = TRUE)})
+## Sub model
+neher_H3N2_yearly_tree = sapply(1997:2011, function(xx){valid = floor(H3N2_aa$Num.Date) == xx; mean(H3N2_aa$CTiterSub[valid], na.rm = TRUE)})
 
 ## Visualise the raw mean locations
-par(mfrow = c(1,2))
-plot(1997:2011, bedford_H3N2_yearly-min(bedford_H3N2_yearly), xlab = 'year', ylab = 'antigenic location', main = 'Raw estimates')
-points(1997:2011, neher_H3N2_yearly-min(neher_H3N2_yearly), col = 'red')
-legend('topleft', c('bedford', 'neher'), col = c('black', 'red'), pch = 1)
+pdf(outfile2)
+par(mfrow = c(1,1))
+# plot(1997:2011, bedford_H3N2_yearly-min(bedford_H3N2_yearly), xlab = 'year', ylab = 'antigenic location', main = 'Raw estimates')
+# points(1997:2011, neher_H3N2_yearly-min(neher_H3N2_yearly), col = 'red')
 ## Find the scaling factor that standardizes estimates to span the same range
-scale_factor = diff(range(neher_H3N2_yearly))/diff(range(bedford_H3N2_yearly))
+scale_factor = diff(range(neher_H3N2_yearly_tree))/diff(range(bedford_H3N2_yearly))
 ## Rescale and visualize the rescaled points
-plot(1997:2011, (bedford_H3N2_yearly-min(bedford_H3N2_yearly))*scale_factor, xlab = 'year', ylab = 'antigenic location', main = 'Rescaled Bedford estimates; Neher unchanged')
-points(1997:2011, neher_H3N2_yearly-min(neher_H3N2_yearly), col = 'red')
+plot(1997:2011, (bedford_H3N2_yearly-min(bedford_H3N2_yearly))*scale_factor, xlab = 'calendar year of isolate collection', ylab = 'mean antigenic location')
+points(1997:2011, neher_H3N2_yearly_tree-min(neher_H3N2_yearly_tree), col = 'red')
+legend('topleft', c('bedford', 'neher'), col = c('black', 'red'), pch = 1)
+dev.off()
 
 ## Rescale the bedford H1N1 estimates
 H1N1_aa_pre2009$ag1 = H1N1_aa_pre2009$ag1*scale_factor
+
+
 
 
 
@@ -68,15 +78,13 @@ H1N1_aa_pre2009$ag1 = H1N1_aa_pre2009$ag1*scale_factor
 ## - Separate isolates into influenza seasons
 ## - Find the mean antigenic location per season
 ## - Find the season-to-season differnce between means to measure average antigenic advance per year
-## Establish a baseline using data from nextstrain
-lowest = floor(min(H3N2_aa$Num.Date, na.rm = TRUE))
 ## Our definition is that the NH influenza sesaon begins in week 40
 ##  There are 52.14 weeks in a year
 ##  NH flu season begins in decimal week 40/52.14 = 0.77
 ##  Separate all specimens into NH flu seasons, starting with the 1997-1998 season
 ##  Find average divergence from strains that circulated in 1997, prior to week 40
 ##  Then find the difference between season-to-season divergence
-yrs = 1997:max(floor(H3N2_aa$Num.Date), na.rm = TRUE) # Years of interest
+yrs = floor(min(H3N2_aa$Num.Date, na.rm = TRUE)):max(floor(H3N2_aa$Num.Date), na.rm = TRUE) # Years of interest
 CTiter.raw = CTiterSub.raw = numeric(length(yrs)) # Initialize raw divergence
 names(CTiter.raw) = names(CTiterSub.raw) = paste(yrs, yrs+1, sep = "-")
 baseline = colMeans(subset(H3N2_aa, Num.Date < 1997.77, select = c('CTiter', 'CTiterSub')))
@@ -100,7 +108,7 @@ plot(seq(1997.5, 2018.5, by = 1), CTiterSub.H3N2, col = 'red', main = 'H3N2 CTit
 yrs = 2009:2018 # Years of interest
 CTiter.raw = CTiterSub.raw = numeric(length(yrs)) # Initialize raw divergence
 names(CTiter.raw) = names(CTiterSub.raw) = paste(yrs, yrs+1, sep = "-")
-baseline = colMeans(subset(H1N1_aa_post2009, Num.Date < lowest+.77, select = c('CTiter', 'CTiterSub')))
+baseline = colMeans(subset(H1N1_aa_post2009, Num.Date < 2009+.77, select = c('CTiter', 'CTiterSub')))
 for(yy in 1:length(yrs)){
   valid = which(H1N1_aa_post2009$Num.Date >= yrs[yy]+.77 & H1N1_aa_post2009$Num.Date < yrs[yy]+1.77) # Extract all the sample indices from a given NH season (week 40-week 39)
   CTiter.raw[yy] = mean(H1N1_aa_post2009[valid, 'CTiter'])
@@ -116,6 +124,11 @@ points(seq(2009.5, 2018.5, by = 1), CTiterSub.H1N1, col = 'red'); abline(h = 0)
 
 
 
+
+
+
+
+
 ############################################# pandemic H1N1 ############################################# 
 ## -------------------------- Only one year of circulation, aa = NA ------------------------------
 
@@ -127,7 +140,7 @@ points(seq(2009.5, 2018.5, by = 1), CTiterSub.H1N1, col = 'red'); abline(h = 0)
 yrs = 2002:2008 # Years of interest
 aassn.raw = numeric(length(yrs)) # Initialize raw divergence
 names(aassn.raw) =  paste(yrs, yrs+1, sep = "-")
-baseline = colMeans(subset(H1N1_aa_pre2009, decimal.date < lowest+.77, select = c('ag1')))
+baseline = colMeans(subset(H1N1_aa_pre2009, decimal.date < 2002+.77, select = c('ag1')))
 for(yy in 1:length(yrs)){
   valid = which(H1N1_aa_pre2009$decimal.date >= yrs[yy]+.77 & H1N1_aa_pre2009$decimal.date < yrs[yy]+1.77) # Extract all the sample indices from a given NH season (week 40-week 39)
   aassn.raw[yy] = mean(H1N1_aa_pre2009[valid, 'ag1'])
@@ -148,12 +161,12 @@ plot(seq(2002.5, 2008.5, by = 1), aassn, col = 'blue'); abline(h = 0)
 
 
 
-
-
+###### Import case data
+source('00-Inputs_multinomial.R')
 #######################################
 ## Reformat H3N2 data for plotting
 ######################################
-H3.master = H3.master[-(1:2),] # Drop seassons before 200203 season, the first year with corresponding data on antigenic advance.
+H3.master = H3.master[-which(as.numeric(rownames(H3.master))<200203),] # Drop seassons before 200203 season, the first year with corresponding data on antigenic advance.
 ## Remove data from earlier seasons
 num.season = as.numeric(gsub(rownames(H3.master), pattern = '(\\d{4})\\d{2}', replacement = '\\1'))+1 ## extract the second year of each sesaon. Use this to convert birth years to ages
 age.mat = t(sapply(num.season, FUN = function(xx){xx-2015:1918})) # Entires correspond to the age of each entry in H3.master
@@ -162,8 +175,8 @@ H3.dat = matrix(NA, nrow = nrow(H3.master), ncol = 86, dimnames = list(rownames(
 for(ii in 1:nrow(H3.dat)){
   H3.dat[ii, ] = H3.master[ii, which(age.mat[ii,] %in% 0:85)]
 }
-## Get rid of seasons with fewer than 50 observations
-H3.dat = H3.dat[rowSums(H3.dat)>=70, ]
+## Get rid of seasons with fewer than min.obs
+H3.dat = H3.dat[rowSums(H3.dat)>=min.obs, ]
 ## Calculte frequencies for plotting
 H3.freq = H3.dat/rowSums(H3.dat)
 H3.freq_cumulative = t(apply(H3.freq, 1, cumsum))
@@ -187,17 +200,17 @@ H3.summary$count =  melt(as.data.frame(cbind(count = H3.dat,
 ## Define a function to reformat data to create histograms
 age_bins = function(age_tab){
   out = cbind(rowSums(age_tab[,as.character(0:10)]),
-        rowSums(age_tab[,as.character(11:25)]),
-        rowSums(age_tab[,as.character(26:40)]),
-        rowSums(age_tab[,as.character(41:55)]),
-        rowSums(age_tab[,as.character(56:70)]),
-        rowSums(age_tab[,as.character(71:85)]))
+              rowSums(age_tab[,as.character(11:40)]),
+              rowSums(age_tab[,as.character(41:60)]),
+              rowSums(age_tab[,as.character(61:85)]))
   out = out/rowSums(out)
-  colnames(out) = c('0-10', '11-25', '26-40', '41-55', '56-70', '71-75')
+  colnames(out) = c('0-5', '6-40', '41-60', '61-85')
   as.data.frame(out)
 }
+
 ## Bin case counts into broad age groups
 H3.age.bins = cbind(age_bins(H3.dat), 'CTiter' = CTiter.H3N2[gsub(rownames(H3.dat), pattern = "(\\d{4})(\\d{2})", replacement = "\\1-20\\2")], 'season' = rownames(H3.dat))
+H3.age.bins_sub = cbind(age_bins(H3.dat), 'CTiterSub' = CTiterSub.H3N2[gsub(rownames(H3.dat), pattern = "(\\d{4})(\\d{2})", replacement = "\\1-20\\2")], 'season' = rownames(H3.dat))
 
 
 
@@ -212,11 +225,9 @@ H3.age.bins = cbind(age_bins(H3.dat), 'CTiter' = CTiter.H3N2[gsub(rownames(H3.da
 ## Refromat post-pandemic H1N1 for plotting
 ## Because we have antigenic advance data on the same scale as H3N2 data, we can plot these on the same panel
 ######################################
-H1.master = H1.master[-(1:2),] # Drop seassons before 200203 season, the first year with corresponding data on antigenic advance.
-## Drop seasons in which 0 cases were observed
-H1.master = H1.master[-c(2,3), ]
+H1.master = H1.master[-(which(as.numeric(rownames(H1.master))<200203)),] # Drop seassons before 200203 season, the first year with corresponding data on antigenic advance.
 ## Extract post-pandemic cases
-H1.post.pandemic = H1.master[5:9, ]
+H1.post.pandemic = H1.master[which(as.numeric(rownames(H1.master))>200900), ]
 
 
 ## Remove data from earlier seasons
@@ -228,16 +239,16 @@ for(ii in 1:nrow(H1.dat)){
   H1.dat[ii, ] = H1.post.pandemic[ii, which(age.mat[ii,] %in% 0:85)]
 }
 ## Get rid of seasons with fewer than 50 observations
-H1.dat = H1.dat[rowSums(H1.dat)>=70, ]
+H1.dat = H1.dat[rowSums(H1.dat)>=min.obs, ]
 ## Calculte frequencies for plotting
 H1.freq = H1.dat/rowSums(H1.dat)
 H1.freq_cumulative = t(apply(H1.freq, 1, cumsum))
 
 ## Melt the age-specific frequencies into a data frame, with antigenic advance ('CTiter') as ID vars
 H1.summary =   melt(as.data.frame(cbind(freq = H1.freq,
-                                        'CTiter' = CTiter.H1N1[gsub(rownames(H1.dat), pattern = "(\\d{4})(\\d{2})", replacement = "\\1-20\\2")], 
-                                        'CTiterSub' = CTiterSub.H1N1[gsub(rownames(H1.dat), pattern = "(\\d{4})(\\d{2})", replacement = "\\1-20\\2")],
-                                        'season' = rownames(H1.freq))), id.vars = c('CTiter', 'CTiterSub', 'season'), variable.name = 'age', value.name = 'frequency')
+                    'CTiter' = CTiter.H1N1[gsub(rownames(H1.dat), pattern = "(\\d{4})(\\d{2})", replacement = "\\1-20\\2")], 
+                    'CTiterSub' = CTiterSub.H1N1[gsub(rownames(H1.dat), pattern = "(\\d{4})(\\d{2})", replacement = "\\1-20\\2")],
+                    'season' = rownames(H1.freq))), id.vars = c('CTiter', 'CTiterSub', 'season'), variable.name = 'age', value.name = 'frequency')
 
 ## Add cumulative frequency
 H1.summary$c.freq =  melt(as.data.frame(cbind(c.freq = H1.freq_cumulative,
@@ -250,6 +261,7 @@ H1.summary$count =  melt(as.data.frame(cbind(count = H1.dat,
 
 
 H1.age.bins = cbind(age_bins(H1.dat), 'CTiter' = CTiter.H1N1[gsub(rownames(H1.dat), pattern = "(\\d{4})(\\d{2})", replacement = "\\1-20\\2")], 'season' = rownames(H1.dat))
+H1.age.bins_sub = cbind(age_bins(H1.dat), 'CTiterSub' = CTiterSub.H1N1[gsub(rownames(H1.dat), pattern = "(\\d{4})(\\d{2})", replacement = "\\1-20\\2")], 'season' = rownames(H1.dat))
 
 
 
@@ -260,7 +272,7 @@ H1.age.bins = cbind(age_bins(H1.dat), 'CTiter' = CTiter.H1N1[gsub(rownames(H1.da
 ## Because we have antigenic advance data on the same scale as H3N2 data, we can plot these on the same panel
 ######################################
 ## Extract post-pandemic cases
-H1.pre.pandemic = H1.master[1:4, ]
+H1.pre.pandemic = H1.master[which(as.numeric(rownames(H1.master))<200900), ]
 
 
 ## Remove data from earlier seasons
@@ -272,7 +284,7 @@ for(ii in 1:nrow(H1.dat.pre)){
   H1.dat.pre[ii, ] = H1.pre.pandemic[ii, which(age.mat[ii,] %in% 0:85)]
 }
 ## Get rid of seasons with fewer than 50 observations
-H1.dat.pre = H1.dat.pre[rowSums(H1.dat.pre)>=70, ]
+H1.dat.pre = H1.dat.pre[rowSums(H1.dat.pre)>=min.obs, ]
 ## Calculte frequencies for plotting
 H1.freq.pre = H1.dat.pre/rowSums(H1.dat.pre)
 H1.freq.pre_cumulative = t(apply(H1.freq.pre, 1, cumsum))
@@ -295,26 +307,56 @@ H1.summary.pre$count =  melt(as.data.frame(cbind(count = H1.dat.pre,
 
 
 H1.pre.age.bins = cbind(age_bins(H1.dat.pre), 'CTiter' = aassn[gsub(rownames(H1.dat.pre), pattern = "(\\d{4})(\\d{2})", replacement = "\\1-20\\2")], season = rownames(H1.dat.pre))
+# Just make a copy with different var names.
+H1.pre.age.bins_sub = cbind(age_bins(H1.dat.pre), 'CTiterSub' = aassn[gsub(rownames(H1.dat.pre), pattern = "(\\d{4})(\\d{2})", replacement = "\\1-20\\2")], season = rownames(H1.dat.pre))
 
 
 
-
-H1.age.bins = melt(H1.age.bins, id.vars = c('CTiter', 'season')); H1.age.bins$type = 'H1N1_post_2009'
-H3.age.bins = melt(H3.age.bins, id.vars = c('CTiter', 'season')); H3.age.bins$type = 'H3N2'
-H1.pre.age.bins = melt(H1.pre.age.bins, id.vars = c('CTiter', 'season')); H1.pre.age.bins$type = 'H1N1_seasonal'
-full.age.bins = rbind(H1.age.bins, H3.age.bins, H1.pre.age.bins); full.age.bins$seasontype = paste(full.age.bins$season, full.age.bins$type, sep = '_')
-
+## Study Ctiter method
+H1.age.bins = melt(H1.age.bins, id.vars = c('CTiter', 'season')); H1.age.bins$lineage = 'H1N1_post_2009'
+H3.age.bins = melt(H3.age.bins, id.vars = c('CTiter', 'season')); H3.age.bins$lineage = 'H3N2'
+H1.pre.age.bins = melt(H1.pre.age.bins, id.vars = c('CTiter', 'season')); H1.pre.age.bins$lineage = 'H1N1_seasonal'
+full.age.bins = rbind(H1.age.bins, H3.age.bins, H1.pre.age.bins)
+full.age.bins$seasontype = paste(full.age.bins$season, full.age.bins$lineage, sep = '_')
 ## Reorder seasons according to CTiter
 useasontype = unique(full.age.bins$seasontype)
 uaa = unique(full.age.bins$CTiter)
 full.age.bins$seasontype = factor(full.age.bins$seasontype,
                                   levels = useasontype[order(uaa)])
 
-ggplot()+
-  geom_bar(stat = 'identity', data = full.age.bins, aes(x = variable, y = value, fill = CTiter, group = seasontype, color = type), position = 'dodge')+
+
+## Repeat for sub model
+H1.age.bins_sub = melt(H1.age.bins_sub, id.vars = c('CTiterSub', 'season')); H1.age.bins_sub$lineage = 'H1N1_post_2009'
+H3.age.bins_sub = melt(H3.age.bins_sub, id.vars = c('CTiterSub', 'season')); H3.age.bins_sub$lineage = 'H3N2'
+H1.pre.age.bins_sub = melt(H1.pre.age.bins_sub, id.vars = c('CTiterSub', 'season')); H1.pre.age.bins_sub$lineage = 'H1N1_seasonal'
+full.age.bins_sub = rbind(H1.age.bins_sub, H3.age.bins_sub, H1.pre.age.bins_sub)
+full.age.bins_sub$seasontype = paste(full.age.bins_sub$season, full.age.bins_sub$lineage, sep = '_')
+## Reorder seasons according to CTiter
+useasontype = unique(full.age.bins_sub$seasontype)
+uaa = unique(full.age.bins_sub$CTiterSub)
+full.age.bins_sub$seasontype = factor(full.age.bins_sub$seasontype,
+                                  levels = useasontype[order(uaa)])
+
+
+
+## Barplots of the fraction of cases in each age group, by season, color by antigenic advance
+barplots = ggplot()+
+  geom_bar(stat = 'identity', data = full.age.bins, aes(x = variable, y = value, fill = CTiter, group = seasontype, color = lineage), position = 'dodge')+
   scale_fill_viridis_c(option = 'plasma', na.value = 'gray')+
   scale_discrete_manual(values = c('black', 'gray', 'white'), aesthetics = 'color')
+barplots
 
+## Repeat for sub model
+barplots_sub = ggplot()+
+  geom_bar(stat = 'identity', data = full.age.bins_sub, aes(x = variable, y = value, fill = CTiterSub, group = seasontype, color = lineage), position = 'dodge')+
+  scale_fill_viridis_c(option = 'plasma', na.value = 'gray')+
+  scale_discrete_manual(values = c('black', 'gray', 'white'), aesthetics = 'color')
+barplots_sub
+
+
+
+
+### Set up anova-like plot
 ## Calculate pearson correlation coefficients for each variable
 ## Only calculate for H3N2 because there are too few data points for other types
 get.cor = function(xx){
@@ -325,41 +367,59 @@ get.cor = function(xx){
 cor.df = as.data.frame(t(sapply(unique(H3.age.bins$variable), FUN = get.cor)))
 cor.df$variable = unique(H3.age.bins$variable)
 cor.df$label = paste('r=', round(cor.df$r,2), '  p=', round(cor.df$p,2), sep = '')
-cor.df$type = 'H3N2'
+cor.df$lineage = 'H3N2'
 cor.df$CTiter = NA
 
-  ggplot()+
-  facet_wrap(~variable) +
-  geom_smooth(data = full.age.bins, aes(x = CTiter, y = value, group = type, color = type), method = 'lm', na.rm = TRUE, lwd = .5, lty = 2, se = FALSE) +
-  geom_point(data = full.age.bins, aes(x = CTiter, y = value, fill = CTiter, color = type, shape = type)) +
-  scale_color_manual(values = c('gray50', 'gray50', 'black')) +
-  scale_fill_viridis_c(option = 'plasma', na.value = 'gray') +
-  scale_shape_manual(values = c(21,22,23)) +
-  theme_bw() +
-  geom_label(data = cor.df, aes(x = 0, y = .6, label = label), hjust = 0) +
-  xlab('Antigenic advance, relative to previous season') +
-  ylab('Fraction of cases in age group')
+## Repeat for sub model
+get.cor = function(xx){
+  valid = subset(H3.age.bins_sub, variable == xx)
+  out = cor.test(valid$CTiterSub, valid$value, method = 'pearson')
+  c(r = as.numeric(out$estimate), p = as.numeric(out$p.value), variable = xx)
+}
+cor.df.sub = as.data.frame(t(sapply(unique(H3.age.bins_sub$variable), FUN = get.cor)))
+cor.df.sub$variable = unique(H3.age.bins_sub$variable)
+cor.df.sub$label = paste('r=', round(cor.df.sub$r,2), '  p=', round(cor.df.sub$p,2), sep = '')
+cor.df.sub$lineage = 'H3N2'
+cor.df.sub$CTiterSub = NA
+
+
+## Rename type as factor so labels look nice
+full.age.bins$lineage = factor(full.age.bins$lineage, levels = c('H1N1_post_2009', 'H1N1_seasonal', 'H3N2'), labels = c('H1N1 post-2009', 'H1N1 pre-2009', 'H3N2'))
   
-  
+## Tree model  
 anova_like_plot =  ggplot()+
-    facet_wrap(~variable) +
-    #geom_smooth(data = full.age.bins, aes(x = CTiter, y = value, group = type, color = type), method = 'lm', na.rm = TRUE, lwd = .5, lty = 3, se = FALSE) +
-    geom_smooth(data = subset(full.age.bins, type == 'H3N2' & variable == '0-10'), aes(x = CTiter, y = value, group = type, color = type), method = 'lm', na.rm = TRUE, lwd = 1, lty = 2, se = FALSE, show.legend = FALSE) +
-    geom_smooth(data = subset(full.age.bins, type == 'H3N2'), aes(x = CTiter, y = value, group = type, color = type), method = 'lm', na.rm = TRUE, lwd = .5, lty = 2, se = FALSE, show.legend = FALSE) +
-    geom_point(data = full.age.bins, aes(x = CTiter, y = value, color = type, shape = type)) +
+    facet_grid(.~variable) +
+    geom_smooth(data = subset(full.age.bins, lineage == 'H3N2'), aes(x = CTiter, y = value, group = lineage, color = lineage), method = 'lm', na.rm = TRUE, lwd = .5, lty = 2, se = FALSE, show.legend = FALSE) +
+    geom_point(data = full.age.bins, aes(x = CTiter, y = value, color = lineage, shape = lineage)) +
     theme_bw() +
-    geom_label(data = cor.df, aes(x = 0, y = .65, label = label), hjust = 0, color = 4) +
+    geom_label(data = cor.df, aes(x = -.1, y = .58, label = label), hjust = 0, color = 4) +
     xlab('Antigenic advance, relative to previous season') +
-    ylab('Fraction of cases in age group')
+    ylab('Fraction cases') +
+  theme(legend.position="top")
+anova_like_plot 
 
-ggsave(filename = '../figures/Antigenic_advance_scatter.pdf', height = 7, width = 9)
+## Sub model
+anova_like_plot2 =  ggplot()+
+  facet_grid(.~variable) +
+  geom_smooth(data = subset(full.age.bins_sub, lineage == 'H3N2'), aes(x = CTiterSub, y = value, group = lineage, color = lineage), method = 'lm', na.rm = TRUE, lwd = .5, lty = 2, se = FALSE, show.legend = FALSE) +
+  geom_point(data = full.age.bins_sub, aes(x = CTiterSub, y = value, color = lineage, shape = lineage)) +
+  theme_bw() +
+  geom_label(data = cor.df.sub, aes(x = -.1, y = .58, label = label), hjust = 0, color = 4) +
+  xlab('Antigenic advance, relative to previous season') +
+  ylab('Fraction cases') +
+  theme(legend.position="top")
+anova_like_plot2
 
 
 
 
+
+
+
+## Make levels numeric
 remove_levels = function(df.in){
   df.in$age = as.numeric(as.character(df.in$age))
-  df.in$freqquency = as.numeric(as.character(df.in$frequency))
+  df.in$frequency = as.numeric(as.character(df.in$frequency))
   df.in$c.freq = as.numeric(as.character(df.in$c.freq))
   df.in$count = as.numeric(as.character(df.in$count))
   df.in$CTiter = as.numeric(as.character(df.in$CTiter))
@@ -381,31 +441,66 @@ fulldat$age = as.numeric(as.character(fulldat$age))
 fulldat$seasontype = paste(fulldat$type, fulldat$season, sep = '_')
 
 
-ggplot(data = fulldat, aes(x = age, y = c.freq)) + 
-  geom_line(aes(color = CTiter, group = seasontype, linetype = type)) +
-  #geom_point(aes(color = CTiter, group = seasontype, shape = type)) +
+
+
+## Convert to long format (list rows repeatedly for the number of observed cases)
+longdat = fulldat[rep(1:nrow(fulldat), times = fulldat$count), ]
+## Density plots
+H1pdm_dens = ggplot(data = subset(longdat, type == 'H1N1pandemic')) + 
+  geom_density(aes(x = age, color = CTiter, group = seasontype), fill = NA) +
   theme_classic() +
-  scale_color_viridis_c(option = "plasma",  na.value = 'gray') 
+  scale_color_viridis_c(option = "plasma",  na.value = 'gray') +
+  facet_wrap(.~type)
 
-
-ggplot(data = H1.summary, aes(x = age, y = c.freq)) + 
-  geom_line(aes(color = CTiter, group = season), linetype = 1) +
-  #geom_point(aes(color = CTiter, group = seasontype, shape = type)) +
+H1ssn_dens = ggplot(data = subset(longdat, type == 'H1N1seasonal')) + 
+  geom_density(aes(x = age, color = CTiter, group = seasontype), fill = NA) +
   theme_classic() +
-  scale_color_viridis_c(option = "plasma") 
+  scale_color_viridis_c(option = "plasma",  na.value = 'gray') +
+  facet_wrap(.~type)
 
-ggplot(data = H1.summary.pre, aes(x = age, y = c.freq)) + 
-  geom_line(aes(color = CTiter, group = season), linetype = 3) +
-  #geom_point(aes(color = CTiter, group = seasontype, shape = type)) +
+H3_dens = ggplot(data = subset(longdat, type == 'H3N2')) + 
+  geom_density(aes(x = age, color = CTiter, group = seasontype), fill = NA) +
   theme_classic() +
-  scale_color_viridis_c(option = "plasma") 
+  scale_color_viridis_c(option = "plasma",  na.value = 'gray') +
+  facet_wrap(.~type)
 
-ggplot(data = H3.summary, aes(x = age, y = c.freq)) + 
-  geom_line(aes(color = CTiter, group = season), linetype = 2) +
-  #geom_point(aes(color = CTiter, group = seasontype, shape = type)) +
+grid.arrange(H3_dens, H1pdm_dens, H1ssn_dens, nrow = 1)
+
+
+
+longdat$type = factor(longdat$type, levels = c('H3N2','H1N1pandemic', 'H1N1seasonal'), labels = c('H3N2', 'H1N1 post-2009', 'H1N1 pre-2009'))
+ggplot(data = (longdat)) + 
+  geom_density(aes(x = age, color = CTiter, group = seasontype), fill = NA) +
+  theme_bw() +
+  scale_color_viridis_c(option = "plasma",  na.value = 'gray', name = 'advance') +
+  facet_wrap(.~type)
+
+ggsave(filename = '../figures/Antigenic_advance_dens.pdf', height = 2.5, width = 7)
+
+
+
+
+
+## Line plots of observed case fractions
+H1pdm_line = ggplot(data = subset(fulldat, type == 'H1N1pandemic')) + 
+  geom_line(aes(x = age, y = frequency, color = CTiter, group = seasontype)) +
   theme_classic() +
-  scale_color_viridis_c(option = "plasma") 
+  scale_color_viridis_c(option = "plasma",  na.value = 'gray') +
+  facet_wrap(.~type)
 
+H1ssn_line = ggplot(data = subset(fulldat, type == 'H1N1seasonal')) + 
+  geom_line(aes(x = age, y = frequency, color = CTiter, group = seasontype)) +
+  theme_classic() +
+  scale_color_viridis_c(option = "plasma",  na.value = 'gray') +
+  facet_wrap(.~type)
+
+H3_line = ggplot(data = subset(fulldat, type == 'H3N2')) + 
+  geom_line(aes(x = age, y = frequency, color = CTiter, group = seasontype)) +
+  theme_classic() +
+  scale_color_viridis_c(option = "plasma",  na.value = 'gray') +
+  facet_wrap(.~type)
+
+grid.arrange(H3_line, H1pdm_line, H1ssn_line, nrow = 1)
 
 
 
@@ -414,10 +509,7 @@ ggplot(data = H3.summary, aes(x = age, y = c.freq)) +
 
 
 ### CALCULATE KS STATISTIC FOR EACH PAIR OF FLU SEASONS
-## Write a functiont to convert age table into long form
-long_dat = function(short_dat){
-  rep(0:85, short_dat)
-}
+
 ## Write a function to calculate the KS statistic given long data inputs
 KS_stat = function(ld1, ld2){
   ks.test(x = ld1, y = ld2)$statistic
@@ -428,24 +520,20 @@ KS_pval = function(ld1, ld2){
 }
 
 
-
-## Make a list of all data from after the 2009 pandemic (same aa scores)
-H1.list.post = apply(X = H1.dat, MARGIN = 1, FUN = long_dat)
-H1.list.pre = apply(H1.dat.pre, MARGIN = 1, FUN = long_dat)
-H3.list = apply(H3.dat, MARGIN = 1, FUN = long_dat)
-dat.table = rbind(H1.freq[,1:86], H3.freq[,1:86])
-long.dat.list = c(H1.list.post, H3.list)
-dat.types = rep(c('H1pdm', 'H3'), c(length(H1.list.post), length(H3.list)))
-aa = c(H1.freq$CTiter, H3.freq$CTiter); names(aa )= paste(dat.types, names(long.dat.list), sep = '_') # Get antigenic advance scores
-
-
-## Calculate the KS stat for each possible combination of seasons
-nn = length(long.dat.list)
-KS.mat = SSE.mat = matrix(NA, nrow = nn, ncol = nn, dimnames = list(paste(dat.types, names(long.dat.list), sep = '_'), paste(dat.types, names(long.dat.list), sep = '_')))
+## Calculate the SUM SQUARE ERROR between season-specific age distribution for each possible combination of seasons
+ssns = unique(fulldat$seasontype)
+nn = length(ssns)
+csq.mat = KS.mat = matrix(NA, nrow = nn, ncol = nn, dimnames = list(ssns, ssns))
 for(cc in 1:nn){
   for(rr in 1:nn){
-    KS.mat[rr, cc] = ks.test(long.dat.list[[rr]], long.dat.list[[cc]])$statistic
-    SSE.mat[rr, cc] = sum((dat.table[rr, ] - dat.table[cc,])^2)
+    if(rr == cc){
+      csq.mat[rr, cc] = NA
+    }else{
+    age.vec.1 = (subset(fulldat, seasontype == ssns[cc])$freq)
+    age.vec.2 = (subset(fulldat, seasontype == ssns[rr])$freq)
+    csq.mat[rr, cc] = sum(((age.vec.1-age.vec.2)^2))
+    KS.mat[rr,cc] = KS_pval(age.vec.1,age.vec.2)
+    }
   }
 }
 
@@ -457,16 +545,19 @@ KS$del.aa = abs(KS$aa1-KS$aa2)
 
 
 SSE = melt(SSE.mat)
-SSE$aa1 = sapply(SSE$X1, FUN = function(xx) aa[which(names(aa) == xx)])
+SSE$aa1 = sapply(SSE$Var1, FUN = function(xx) aa[which(names(aa) == xx)])
 SSE$aa2 = sapply(SSE$X2, FUN = function(xx) aa[which(names(aa) == xx)])
 SSE$del.aa = abs(SSE$aa1-SSE$aa2)
-
+SSE$st1 = SSE$Var1
+SSE$st2 = SSE$Var2
+SSE = separate(SSE, Var1, into = c('type1', 'ssn1'))
+SSE = separate(SSE, Var2, into = c('type2', 'ssn2'))
 
 
 
 ggplot()+
-  geom_raster(data = SSE, aes(x = X1, y = X2, fill = (value)), )+
-  scale_fill_viridis_c(option = 'plasma', limits = c(1e-8, max(SSE$value)+.01), na.value = 'gray')
+  geom_raster(data = subset(SSE,  st1 != 'H1N1seasonal_200607' & st2 != 'H1N1seasonal_200607'), aes(x = st1, y = st2, fill = (value)))+
+  scale_fill_viridis_c(option = 'plasma') #, limits = c(1e-8, max(SSE$value)+.01), na.value = 'gray')
 
 
 

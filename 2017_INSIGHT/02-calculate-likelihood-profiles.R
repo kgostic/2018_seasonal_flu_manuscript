@@ -13,14 +13,16 @@ library("optparse") # Load library
 library("parallel")
 option_list = list(
   # Set up ability to pass an output file path from bash to R
-  make_option(c("-outpath", "--outpath"), type="character", default=NULL, 
+  make_option(c("-outpath", "--outpath"), type="character", default=NULL,
               help="the path to your outpath", metavar="character"),
   # Set up ability to pass the run number from bash to R
   make_option(c("-var", "--var"), type = "integer", default = NULL, help="input index number")
-); 
+);
 
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser); # Now you have a list called opt with entries opt$var (integer, run number), opt$outpath (character, output file path)
+
+#opt = list(outpath = 'cluster-outputs/', var = 1)
 
 #print(opt$outpath) # Print the output filepath from the cluster for checking
 
@@ -32,7 +34,7 @@ opt = parse_args(opt_parser); # Now you have a list called opt with entries opt$
 ## Calculate likelihood profiles for all paramters in models fitted to INSIGHT data
 source('00-Import_FLU002_-for-multinomial.R')
 source('0func-multinomial_likelihood.R')
-load('processed-data/fitted_models.RData')
+load('processed-data/INSIGHT_fitted_models.RData')
 #attach(fits)
 
 
@@ -91,7 +93,7 @@ prof_grid = function(pvec, fixpar, gridpoints, lows, highs, H1.protection, H3.pr
 ############################
 fitted_model = fits[[opt$var]] # Extract one model for which to run profiles
 model_name = gsub(pattern = 'lk.(\\w+)', replacement = '\\1', x = names(fits)[opt$var]) # Extract factor abbreviation from model's name
-print(paste(model_name))
+print(paste(opt$var, model_name))
 
 ## Set up lower and upper bounds for estimated free par values in each model. Vector changes depending on which free paramters are included in the model fit
 # mod.lows = .001 Always 0.001, hard code below
