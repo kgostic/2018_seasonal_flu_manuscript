@@ -1,1 +1,0 @@
-## Analyze Arizona severity data

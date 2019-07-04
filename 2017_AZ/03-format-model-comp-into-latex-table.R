@@ -7,7 +7,7 @@ load('processed-data/AZ_profiles.RData')
 
 outfile1 = 'processed-data/AZ_results_table.csv'
 outfile2 = 'processed-data/AIC_AZ.csv'
-outfile3 = 'processed-data/Formatted_AZ_results.csv'
+outfile3 = '../tables/Formatted_AZ_results.csv'
 
 # Initialize matris
 results = matrix(NA, nrow = 4, ncol = length(lk.AG$par)*3, dimnames = list(c('A', 'AN', 'AS', 'AG'),  paste(rep(names(lk.AG$par), each = 3), c('best', 'low', 'high'), sep = '_') ))
