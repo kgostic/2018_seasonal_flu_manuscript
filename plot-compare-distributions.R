@@ -17,10 +17,10 @@ spar.low = .6
 spar.high = 1
 
 #### OUTPUTS
-outfile6 = 'figures/age-dists-ARIZONA-all-seasons.pdf' ## Supplement
-outfile7 = 'figures/age-dists-by-season-ARIZONA-ages0-90.pdf' ## Supplement
-outfile8 = 'figures/age-dists-by-season-ARIZONA-ages18-90.pdf' ## Main text, Fig. 2
-outfile9 = 'figures/age-dists-by-season-ARIZONA-hilowsmoothpar.pdf' ## Supplement
+outfile6 = 'figures/age-dists-ARIZONA-all-seasons.tiff' ## Supplement
+outfile7 = 'figures/age-dists-by-season-ARIZONA-ages0-90.tiff' ## Supplement
+outfile8 = 'figures/age-dists-by-season-ARIZONA-ages18-90.tiff' ## Main text, Fig. 2
+outfile9 = 'figures/age-dists-by-season-ARIZONA-hilowsmoothpar.tiff' ## Supplement
 
 
 ## Write a function to output transparent colors
@@ -62,7 +62,7 @@ azplotdat = subset(raw.dat, season %in% include & age %in% agerange)
 ssns = unique(azplotdat$season)
 
 {
-  pdf(outfile6, width = 6.5, height = 10)
+  tiff(outfile6, width = 6.5, height = 10, units = 'in', res = 400)
   ## Set smoothing paramter
   par(mfrow = c(5,3))
   par(mar = c(2,1.5,2,1)+1.5)
@@ -112,7 +112,7 @@ ssns = unique(azplotdat$season)
 ## Plot with all ages (0-90)
 ## Extract data from seasons wtih more than 50 observations of each subtype
 {
-  pdf(outfile7, width = 6.5, height = 4.5)
+  tiff(outfile7, width = 6.5, height = 4.5, units = 'in', res = 400)
   ## Set smoothing paramter
   #layout(matrix(c(1,8,2, 9,3,4, 5,6,7), byrow = T, nrow = 3))
   par(mfrow = c(2,3),mar = c(1,3,2.5,0))
@@ -175,7 +175,7 @@ ssns = unique(azplotdat$season)
 
 ########## repeat with a higher and lower smoothing paramter (sparlow = .6, sparhigh = 1)
 {
-  pdf(outfile9, width = 6.5, height = 8.5)
+  tiff(outfile9, width = 6.5, height = 8.5, units = 'in', res = 400)
   ## Set smoothing paramter
   par(mfrow = c(4,3))
   ## Overall
@@ -248,7 +248,7 @@ azplotdat = subset(raw.dat, season %in% include & age %in% agerange)
 ssns = unique(azplotdat$season)
 
 {
-  pdf(outfile8, width = 6.5, height = 6)
+  tiff(outfile8, width = 6.5, height = 6, units = 'in', res = 400)
   ## Set smoothing paramter
   #layout(matrix(c(1,8,2, 9,3,4, 5,6,7), byrow = T, nrow = 3))
   par(mfrow = c(2,3), mar = c(1.5,3,2.5,0))

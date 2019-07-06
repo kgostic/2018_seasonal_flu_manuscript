@@ -16,12 +16,15 @@ setwd('../')# Switch back into the home directory
 
 
 ## OUTPUTS
-plot3 = 'figures/AZ_H1N1_fit.pdf'
-plot4 = 'figures/AZ_H3N2_fit.pdf'
-plot5 = 'figures/AZ_age_fit.pdf'
-plot6 = 'figures/AZ_imp_fit.pdf'
+plot3 = 'figures/AZ_H1N1_fit.tiff'
+plot4 = 'figures/AZ_H3N2_fit.tiff'
+plot5 = 'figures/AZ_age_fit.tiff'
+plot6 = 'figures/AZ_imp_fit.tiff'
 
 
+colH2N2 = tns('dodgerblue', .9)
+colH1N1 = tns('steelblue2', .75)
+colH3N2 = tns('red')
 
 
 ## Set up color palette
@@ -83,9 +86,9 @@ plotmod1 = function(pars, CIs, pro.H1 = 1, pro.H3 = 1, i.type = NULL){
     text(.5, .5, 'NA', cex = 2)
   }else{ # Else, if imprinting protection was included in the model, plot mean birth year-specific relative risk, after adjusting for imprinting protection.
     ## Plot just one row here, because predicted protection changes with birth year
-    plot(-2015:-1918, imprinting.H1[13,], col = 'dodgerblue', cex = .7, ylab = 'relative risk', xlab = 'birth year', main = 'Imprinting effects', ylim = c(0,1), bty = 'n', xaxt = 'n')
+    plot(-2015:-1918, imprinting.H1[13,], col = colH1N1, cex = .7, ylab = 'relative risk', xlab = 'birth year', main = 'Imprinting effects', ylim = c(0,1), bty = 'n', xaxt = 'n')
     axis(side = 1, at = seq(-2015, -1918, by = 10), labels = seq(2015, 1918, by = -10), line = 0)
-    points(-2015:-1918, imprinting.H3[13,], col = 'firebrick1', cex = .7)
+    points(-2015:-1918, imprinting.H3[13,], col = colH3N2, cex = .7)
     }
   ## H1N1 risk in blue, H3N2 risk in red
   mtext('B', side = 3, line = 1.5, at = -5, font = 2)
@@ -118,7 +121,7 @@ plotmod1 = function(pars, CIs, pro.H1 = 1, pro.H3 = 1, i.type = NULL){
   return(list(age = age.baseline.rr, iH1 = imprinting.H1, iH3 = imprinting.H3,
               fits = rbind(rev(colSums(pp.H1/rowSums(pp.H1)*rowSums(H1.master))), rev(colSums(pp.H3/rowSums(pp.H3)*rowSums(H3.master))))))
 }
-# Get prediction for model AS, but don't save to pdf
+# Get prediction for model AS, but don't save to tiff
 AS = plotmod1(lk.AS$par, pro.H1 = proH1.master, pro.H3 = proH3.master, i.type = 'HA Sub', CIs = AS.CIs)
 spred = AS$fits# Get predicted age distributions using hte best fit subtype-specific imprinting model.
 AG = plotmod1(lk.AG$par, pro.H1 = prog1.master, pro.H3 = prog2.master, i.type = "HA grp", CIs = AG.CIs)
@@ -133,7 +136,7 @@ npred = AN$fits
 
 
 ######### Plot AZ age fits
-pdf(file = plot5, width = 3, height = 1.5)
+tiff(file = plot5, width = 3, height = 1.5, units = 'in', res = 400)
 par(mar = c(3,3,1,1)+.5, mgp = c(2,1,0))
 plot(0:97, AN$age[13,], main = '', ylab = 'relative risk', xlab = 'age', bty = 'n', ylim = c(0,1))
 #abline(h = 1, lty = 2)
@@ -141,7 +144,7 @@ dev.off()
 
 
 ######### Plot AZ imprinting fits
-pdf(file = plot6, width = 3, height = 1.5)
+tiff(file = plot6, width = 3, height = 1.5, units = 'in', res = 400)
 par(mar = c(3,3,1,1)+.5, mgp = c(2,1,0))
 plot(-2015:-1918, AN$iH1[13,], col = 'dodgerblue', cex = .7, ylab = 'relative risk', xlab = 'birth year', main = '', ylim = c(0,1), bty = 'n', xaxt = 'n')
 axis(side = 1, at = seq(-2015, -1918, by = 10), labels = seq(2015, 1918, by = -10), line = 0)
@@ -151,7 +154,7 @@ dev.off()
 
 ######### Plot AZ H1N1 fits
 dal = round(del.AIC, 2); names(dal) = gsub(pattern = 'lk.(\\w+)', replacement = '\\1', x = names(del.AIC))
-pdf(file = plot3, width = 4, height = 3.5)
+tiff(file = plot3, width = 4, height = 3.5, units = 'in', res = 400)
 par(mar = c(3,3,2,2)+.5, mgp = c(2,1,0))
 xx = barplot(colSums(H1.master), col = 'gray', border = 'gray', ylim = c(0, 115), xlab = 'birth year', ylab = 'cases')
 axis(side = 1, at = xx[seq(1, length(xx), by = 10)], labels = NA, line = 0)
@@ -167,7 +170,7 @@ dev.off()
 
 
 ######### Plot AZ H3N2 fits
-pdf(file = plot4, width = 4, height = 3.5)
+tiff(file = plot4, width = 4, height = 3.5, units = 'in', res = 400)
 par(mar = c(3,3,2,2)+.5, mgp = c(2,1,0))
 xx = barplot(colSums(H3.master), col = 'gray', border = 'gray', xlab = 'birth year', ylab = 'cases')
 axis(side = 1, at = xx[seq(1, length(xx), by = 10)], labels = NA, line = 0)

@@ -14,7 +14,7 @@ setwd('~/Dropbox/R/2018_seasonal_flu/Antigenic_advance/')
 min.obs = 100
 
 ## OUTPUTS
-outfile2 = '../figures/bedford_neher_aa_scaling.pdf'
+outfile2 = '../figures/bedford_neher_aa_scaling.tiff'
 
 
 #######################################
@@ -47,7 +47,7 @@ neher_H3N2_yearly_tree = sapply(1997:2011, function(xx){valid = floor(H3N2_aa$Nu
 neher_H3N2_yearly_tree = sapply(1997:2011, function(xx){valid = floor(H3N2_aa$Num.Date) == xx; mean(H3N2_aa$CTiterSub[valid], na.rm = TRUE)})
 
 ## Visualise the raw mean locations
-pdf(outfile2)
+tiff(outfile2, width = 7, height = 7, res = 400, units = 'in')
 par(mfrow = c(1,1))
 # plot(1997:2011, bedford_H3N2_yearly-min(bedford_H3N2_yearly), xlab = 'year', ylab = 'antigenic location', main = 'Raw estimates')
 # points(1997:2011, neher_H3N2_yearly-min(neher_H3N2_yearly), col = 'red')
@@ -56,7 +56,7 @@ scale_factor = diff(range(neher_H3N2_yearly_tree))/diff(range(bedford_H3N2_yearl
 ## Rescale and visualize the rescaled points
 plot(1997:2011, (bedford_H3N2_yearly-min(bedford_H3N2_yearly))*scale_factor, xlab = 'calendar year of isolate collection', ylab = 'mean antigenic location')
 points(1997:2011, neher_H3N2_yearly_tree-min(neher_H3N2_yearly_tree), col = 'red')
-legend('topleft', c('bedford', 'neher'), col = c('black', 'red'), pch = 1)
+legend('topleft', c('Bedford et al., eLife, 2014', 'Nextstrain, tree model (CTiter)\n(see Neher et al., PNAS, 2016)'), col = c('black', 'red'), pch = 1)
 dev.off()
 
 ## Rescale the bedford H1N1 estimates
@@ -400,7 +400,7 @@ anova_like_plot =  ggplot()+
   theme(legend.position="top")
 anova_like_plot 
 
-ggsave(filename = '../figures/Antigenic_advance_corplot.pdf', height = 3, width = 7)
+ggsave(filename = '../figures/Antigenic_advance_corplot.tiff', height = 3, width = 7)
 
 
 ## Sub model
@@ -479,7 +479,7 @@ ggplot(data = (longdat)) +
   scale_color_viridis_c(option = "plasma",  na.value = 'gray', name = 'advance') +
   facet_wrap(.~type)
 
-ggsave(filename = '../figures/Antigenic_advance_dens.pdf', height = 2.5, width = 7)
+ggsave(filename = '../figures/Antigenic_advance_dens.tiff', height = 2.5, width = 7)
 
 
 

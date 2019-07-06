@@ -5,12 +5,12 @@ source('00-Inputs_multinomial.R')
 
 
 ## OUTPUTS
-outfile = '../figures/Fig1_hypotheses.pdf'
+outfile = '../figures/Fig1_hypotheses.tiff'
 
 
 
 
-pdf(outfile)
+tiff(outfile, width = 7, height = 7, units = 'in', res = 400)
 ## Set the layout
 layout(matrix(c(0,0,0,1,1,1, 9,9,3,3,6,6, 2,2,4,4,7,7, 10,10,5,5,8,8)+1, nrow = 4,  byrow = T), heights = c(1.5, 1,1,1))
 #layout.show(10)
@@ -24,6 +24,10 @@ tns = function(col.in, aa = .5){
   new.col
 }
 
+colH1N1 = tns(deepskyblue4)
+colH2N2 = tns(blue)
+colH3N2 = tns(red)
+
 
 ######################################
 ## A. Plot imprinting reconstructions
@@ -34,11 +38,11 @@ h2_imprinted = (proH2.master[13,])
 h3_imprinted = (proH3.master[13,]) 
 names(h1_imprinted)=names(h2_imprinted)=names(h3_imprinted)=2015-(as.numeric(colnames(proH1.master)))
 naive = 1-h1_imprinted-h2_imprinted-h3_imprinted
-xx = barplot(rbind(h1_imprinted, h2_imprinted, h3_imprinted, naive), col = c('dodgerblue', 'lightskyblue', 'firebrick', 'gray'), border = NA, space = 0, axes = T, xlab = '', ylab = '', main = '', xaxt = 'n')
+xx = barplot(rbind(h1_imprinted, h2_imprinted, h3_imprinted, naive), col = c('deepskyblue4', 'darkslategray1', 'maroon3', 'gray'), border = NA, space = 0, axes = T, xlab = '', ylab = '', main = '', xaxt = 'n')
 axis(side = 1, line = 0, at = xx[seq(1, 96, by = 5)]-.5, labels = xx[seq(1, 96, by = 5)]-.5)
 mtext(text = 'age in 2015', side = 1, line = 1.75, cex = .7)
 mtext(text = 'prob imprinting to subtype', side = 2, line = 1.75, cex = .7)
-legend(x = 15, y = 1.4, legend = c('H3N2', 'H2N2', 'H1N1', 'naive'), col = c('firebrick', 'lightskyblue', 'dodgerblue', 'gray'),  ncol = 4, xpd = NA, pch = 15)
+legend(x = 15, y = 1.4, legend = c('H3N2', 'H2N2', 'H1N1', 'naive'), col = c('maroon3', 'darkslategray1', 'deepskyblue4', 'gray'),  ncol = 4, xpd = NA, pch = 15)
 
 ## A. label
 mtext(text = 'A', side = 3, line = 2, at = -12, font = 2)
@@ -64,21 +68,21 @@ text(x = 5.5, y = y.imp, 'H3N2', font = 1)
 
 ## Add HA group row
 text(x = 2, y = 2.5, 'HA group level', font = 2)
-polygon(x = c(3,4,4,3), y = c(2,2,3,3), border = NA, col = tns('dodgerblue')); text(x = 3.5, y = 2.5, 'protected\nH1N1') 
-polygon(x = c(3,4,4,3)+1, y = c(2,2,3,3), border = NA, col = tns('dodgerblue')); text(x = 4.5, y = 2.5, 'protected\nH1N1') 
+polygon(x = c(3,4,4,3), y = c(2,2,3,3), border = NA, col = tns('deepskyblue4')); text(x = 3.5, y = 2.5, 'protected\nH1N1') 
+polygon(x = c(3,4,4,3)+1, y = c(2,2,3,3), border = NA, col = tns('deepskyblue4')); text(x = 4.5, y = 2.5, 'protected\nH1N1') 
 polygon(x = c(3,4,4,3)+2, y = c(2,2,3,3), border = NA, col = tns('red')); text(x = 5.5, y = 2.5, 'protected\nH3N2') 
 
 
 ## Add HA subtype row
 text(x = 2, y = 1.5, 'HA subtype level', font = 2)
-polygon(x = c(3,4,4,3), y = c(2,2,3,3)-1, border = NA, col = tns('dodgerblue')); text(x = 3.5, y = 1.5, 'protected\nH1N1') 
+polygon(x = c(3,4,4,3), y = c(2,2,3,3)-1, border = NA, col = tns('deepskyblue4')); text(x = 3.5, y = 1.5, 'protected\nH1N1') 
 text(x = 4.5, y = 1.5, 'no\nprotection') # No protection this row
 polygon(x = c(3,4,4,3)+2, y = c(2,2,3,3)-1, border = NA, col = tns('red')); text(x = 5.5, y = 1.5, 'protected\nH3N2') 
 
 
 ## Add NA subtype row
 text(x = 2, y = 0.5, 'NA subtype level', font = 2)
-polygon(x = c(3,4,4,3), y = c(2,2,3,3)-2, border = NA, col = tns('dodgerblue')); text(x = 3.5, y = .5, 'protected\nH1N1') 
+polygon(x = c(3,4,4,3), y = c(2,2,3,3)-2, border = NA, col = tns('deepskyblue4')); text(x = 3.5, y = .5, 'protected\nH1N1') 
 polygon(x = c(3,4,4,3)+1, y = c(2,2,3,3)-2, border = NA, col = tns('red')); text(x = 4.5, y = .5, 'protected\nH3N2') 
 polygon(x = c(3,4,4,3)+2, y = c(2,2,3,3)-2, border = NA, col = tns('red')); text(x = 5.5, y = .5, 'protected\nH3N2') 
 
@@ -116,22 +120,22 @@ mtext(text = 'C', side = 3, line = 1, at = 1.5, font = 2)
 ## D-F. Imprinting predictions
 ######################################
 xx = -as.numeric(colnames(proH1.master)) # Convert from age to birth year for x axis
-plot(xx, 1-h1_imprinted, col = 'dodgerblue', xlab = '', ylab = '', main = '', xaxt = 'n')
+plot(xx, 1-h1_imprinted, col = 'deepskyblue4', xlab = '', ylab = '', main = '', xaxt = 'n')
 ax.lab = seq(xx[6], xx[96], by = 15)
 axis(1, at = ax.lab, labels = -ax.lab)
-points(xx, 1-h3_imprinted, col = 'firebrick')
+points(xx, 1-h3_imprinted, col = 'maroon3')
 mtext(text = 'birth year', side = 1, line = 1.9, cex = .7)
 mtext(text = 'P(unprotected)', side = 2, line = 1.9, cex = .7)
 mtext(text = 'HA subtype-level', side = 3, line = .2, cex = .7, font = 2)
 ## D. label
 mtext(text = 'D', side = 3, line = 1, at = -2015, font = 2)
-legend(x = -2010, y = 1.6, legend = c('H1N1 risk', 'H3N2 risk'), col = c('dodgerblue', 'firebrick'), bty = 'n', ncol = 3, xpd = NA, pch = 15)
+legend(x = -2010, y = 1.6, legend = c('H1N1 risk', 'H3N2 risk'), col = c('deepskyblue4', 'maroon3'), bty = 'n', ncol = 3, xpd = NA, pch = 15)
 
 
 ## HA group-level imprinting
-plot(xx, 1-(h1_imprinted+h2_imprinted), col = 'dodgerblue', xlab = '', ylab = '', main = '', xaxt = 'n')
+plot(xx, 1-(h1_imprinted+h2_imprinted), col = 'deepskyblue4', xlab = '', ylab = '', main = '', xaxt = 'n')
 axis(1, at = ax.lab, labels = -ax.lab)
-points(xx, 1-h3_imprinted, col = 'firebrick')
+points(xx, 1-h3_imprinted, col = 'maroon3')
 mtext(text = 'birth year', side = 1, line = 1.9, cex = .7)
 mtext(text = 'P(unprotected)', side = 2, line = 1.9, cex = .7)
 mtext(text = 'HA group-level', side = 3, line = .2, cex = .7, font = 2)
@@ -140,9 +144,9 @@ mtext(text = 'E', side = 3, line = 1, at = -2015, font = 2)
 
 
 ## NA subtype-level imprinting
-plot(xx, 1-h1_imprinted, col = 'dodgerblue', xlab = '', ylab = '', main = '', xaxt = 'n')
+plot(xx, 1-h1_imprinted, col = 'deepskyblue4', xlab = '', ylab = '', main = '', xaxt = 'n')
 axis(1, at = ax.lab, labels = -ax.lab)
-points(xx, 1-(h2_imprinted+h3_imprinted), col = 'firebrick')
+points(xx, 1-(h2_imprinted+h3_imprinted), col = 'maroon3')
 mtext(text = 'birth year', side = 1, line = 1.9, cex = .7)
 mtext(text = 'P(unprotected)', side = 2, line = 1.9, cex = .7)
 mtext(text = 'NA subtype-level', side = 3, line = .2, cex = .7, font = 2)
@@ -163,26 +167,25 @@ rr = function(Hm, pro.vec){
   pred/sum(pred)
 }
 Hm = .75 # Set the assumed relative risk of infection given imprinting protection
-plot(0:97, rr(Hm, h1_imprinted), col = 'dodgerblue', xlab = '', ylab = '', main = '', ylim = c(0,.02))
-points(0:97, rr(Hm, h3_imprinted), col = 'firebrick')
+plot(0:97, rr(Hm, h1_imprinted), col = 'deepskyblue4', xlab = '', ylab = '', main = '', ylim = c(0,.02))
+points(0:97, rr(Hm, h3_imprinted), col = 'maroon3')
 mtext(text = 'age', side = 1, line = 1.9, cex = .7)
 mtext(text = 'fraction of cases', side = 2, line = 1.9, cex = .7)
-legend(x = 10, y = .0315, legend = c('H1N1 risk', 'H3N2 risk'), col = c('dodgerblue', 'firebrick'), bty = 'n', ncol = 3, xpd = NA, pch = 15)
+legend(x = 10, y = .0315, legend = c('H1N1 risk', 'H3N2 risk'), col = c('deepskyblue4', 'maroon3'), bty = 'n', ncol = 3, xpd = NA, pch = 15)
 ## G. label
 mtext(text = 'G', side = 3, line = 1, at = 1.5, font = 2)
 
 ## HA subtype-level imprinting
-plot(0:97, rr(Hm,(h1_imprinted+h2_imprinted)), col = 'dodgerblue', xlab = '', ylab = '', main = '', ylim = c(0,.02))
-points(0:97, rr(Hm, h3_imprinted), col = 'firebrick')
+plot(0:97, rr(Hm,(h1_imprinted+h2_imprinted)), col = 'deepskyblue4', xlab = '', ylab = '', main = '', ylim = c(0,.02))
+points(0:97, rr(Hm, h3_imprinted), col = 'maroon3')
 mtext(text = 'age', side = 1, line = 1.9, cex = .7)
 mtext(text = 'fraction of cases', side = 2, line = 1.9, cex = .7)
 mtext(text = 'H', side = 3, line = 1, at = 1.5, font = 2)
 
 ## NA subtype-level imprinting
-plot(0:97, rr(Hm, h1_imprinted), col = 'dodgerblue', xlab = '', ylab = '', main = '', ylim = c(0,.02))
-points(0:97, rr(Hm, (h2_imprinted+h3_imprinted)), col = 'firebrick')
+plot(0:97, rr(Hm, h1_imprinted), col = 'deepskyblue4', xlab = '', ylab = '', main = '', ylim = c(0,.02))
+points(0:97, rr(Hm, (h2_imprinted+h3_imprinted)), col = 'maroon3')
 mtext(text = 'age', side = 1, line = 1.9, cex = .7)
-mtext(text = 'fraction of cases', side = 2, line = 1.9, cex = .7)
 ## I. label
 mtext(text = 'I', side = 3, line = 1, at = 1.5, font = 2)
 
