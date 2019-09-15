@@ -2,6 +2,8 @@
 ## Script formats data for input into multinomial likelihood
 ## Also loads relevant probabilities of imprinting, and formats thses for input into likelihood
 ## Also generates age-specific indicators, which we use inside the likelihood to fit age specific step functions
+library('dplyr')
+library('reshape')
 
 ## Load Arizona data
 raw.dat = read.csv('raw-data/AZ_flu_surveillance_93-94.csv')
@@ -24,13 +26,11 @@ raw.dat = raw.dat[-364, ]
 ## Calculate age for plotting
 raw.dat$year = as.numeric(gsub(raw.dat$SEASON, pattern = '(\\d{4})\\d{2}', replacement = '\\1'))
 raw.dat$age = raw.dat$year+1 - raw.dat$BIRTHYEAR
-
-
-
 names(raw.dat) = c('season', 'birthyear', 'subtype', 'year', 'age')
 ## Exclude cases born before 1918 (imprinting history not known, and there are few cases)
 raw.dat = raw.dat[-which(raw.dat$birthyear < 1918), ]
 write.csv(raw.dat, file = 'processed-data/AZ_seasonal_linelist.csv', row.names = FALSE)
+
 
 ## Tabluate the number of H1 and H3 cases in each birth year where cases were observed
 ssns = unique(raw.dat$season)
@@ -94,10 +94,57 @@ a60.66[agemat %in% (60:66)] = 1
 a67.73[agemat %in% (67:73)] = 1
 a74.80[agemat %in% (74:80)] = 1
 a81.90plus[agemat >= 81] = 1
-
 ## Each agemat is an indicator matrix with 1s to indicate which birth years belond to a certain age class in the year of case observation
 
-## Plots to check that agemats are properly formatted.
+
+
+
+
+## Demography matrix
+## Load data
+dat00_10 = read.csv('raw-data/census_by_state_2000_2010.csv')
+dat10_18 = read.csv('raw-data/census_by_state_2010_2018.csv')
+## Data from https://www2.census.gov/programs-surveys/popest/datasets/
+# Extract AZ data, extract popestiamte columns
+formatted_00_09 = dat00_10 %>% subset(NAME == 'Arizona' & SEX == 0 & AGE <= 85) %>% select(c(NAME, AGE, contains('POPESTIMATE'))) %>% melt(id.vars = c('NAME', 'AGE')) %>% tidyr::extract(col = variable, into = 'YEAR', regex = "\\w+(\\d\\d\\d\\d)") 
+formatted_10_18 = dat10_18 %>% subset(NAME == 'Arizona' & SEX == 0 & AGE <= 85) %>% select(c(NAME, AGE, contains('POPEST'))) %>% melt(id.vars = c('NAME', 'AGE')) %>% tidyr::extract(col = 'variable', into = 'YEAR', regex = "POPEST(\\d\\d\\d\\d)_CIV") 
+
+## Combine formatted data sets
+pdat = rbind(subset(formatted_00_09, YEAR < 2010),
+             formatted_10_18)
+
+## Write a function to reformat into standard model input format
+rys = as.numeric(gsub(rownames(H1.master), pattern = '(\\d{4}).+', replacement = "\\1")) # extract first year from rownames
+demog = H1.master*0 # Set up empty matrix
+## From demographic data pdf: POPESTIMATE2000 7/1/2000 resident population estimate. Because popest starts in July, use 2000 for the 2000-2001 season
+for(rowindex in 1:nrow(demog)){
+  rawdem = subset(pdat, YEAR == max(rys[rowindex], 2000))$value # gives a vector of # in age from 0 to 84, last entry gives total for 85+
+  ## Convert from age to birth year using age mat
+  startcol = which(agemat[rowindex,]==0)
+  ## Age class "85" is really the total for all adults 85 and older. 
+  ## We could just evenly distribute this total count over ages 85:100, but the data show that the number of people in each age class tends to decrease with increasing age. So even distrbution would systematically overestimate the number of 100-year-olds, and underestimate the number of 85-year-olds.
+  ## Instead, fit a linear model to the shape of decrease from ages 75-84, the oldest 10 years in the single-year-of-age data
+  pdf = data.frame(xx = 75:84, yy = rawdem[76:85]) ## Extract data to which we fit
+  ft = lm(formula = yy~xx, data = pdf) ## Fit a linear model
+  pd = predict(ft, data.frame(xx = c(85:97))) ## Use lm to extrapolate number of individuals in each age class
+  pd[which(pd<1700)] = 1000 # Set minimum number in any single year of age.
+  ## Check interpolation
+  # plot(0:84, orig[1:85], xlim = c(0, 99), ylim = c(0, 90000))
+  # points(85:97, pd, col = 'blue')
+  # sum(pd); rawdem[86] # Should be similar in value
+  rawdem[86:98] = pd ## Fill in interpolation
+  #points(0:97, rawdem, pch = 16, cex = .8, col = 'red')
+  demog[rowindex, startcol:98] = rawdem[1:sum(agemat[rowindex,]>=0)]
+}
+## normalize
+demog = demog/rowSums(demog)
+## Check inputs by birth year
+# cols = rainbow(16)
+# plot(2015:1918, demog[1,], col = cols[1])
+# for(ii in 2:nrow(demog)){
+#   lines(2015:1918, demog[ii,], col = cols[ii])
+# }
+# ## Plots to check that agemats are properly formatted.
 # barplot(a18.24)
 # barplot(a25.31)
 # barplot(a32.38)
@@ -137,6 +184,7 @@ H3.master_2009 = H3.master[c('200809', '200910'), ]
 prog2.master_2009 = prog2.master[c('2009USA', '2010USA'), ]
 proH3.master_2009 = proH3.master[c('2009USA', '2010USA'), ]
 proN2.master_2009 = proN2.master[c('2009USA', '2010USA'), ]
+demog_2009 = demog[c('200809', '200910'), ]
 
 
 ## Remove 2009-2010 season from master data for model fitting
@@ -162,7 +210,7 @@ prog2.master = prog2.master[-c(9,10), ]
 proH3.master = proH3.master[-c(9,10), ]
 proH2.master = proH2.master[-c(9,10), ]
 proN2.master = proN2.master[-c(9,10), ]
-
+demog = demog[-c(9,10), ]
 
 
 

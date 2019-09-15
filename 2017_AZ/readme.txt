@@ -25,3 +25,12 @@ Plots outputs - Individual model fits and parameter estimates, overall fits to d
 
 
 -------------------
+
+
+
+
+
+
+
+
+The crucial importance of population susceptibility as a driver of epidemic dynamics can be quantified using the parameter Reff , defined as the expected number of new cases caused by a single infectious individual in a partially immune population. Basic theory states that a pathogen cannot invade or persist in a host population if Reff  falls below one. Because Reff  is directly proportional to the susceptible fraction of the population, a decrease in population susceptibility is sufficient to drive Reff  below 1 and to prevent sustained spread of the pathogen. 

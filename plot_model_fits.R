@@ -12,6 +12,7 @@ setwd('~/Dropbox/R/2018_seasonal_flu/2017_AZ/')
 load('processed-data/AZ_model_fits.RData')
 load('processed-data/AZ_CIs.RData')
 source('00-Inputs_multinomial.R') 
+source('0func_tns_color.R')
 setwd('../')# Switch back into the home directory
 
 
@@ -43,6 +44,12 @@ cols = c(NA, 'goldenrod', 'limegreen', 'dodgerblue', 'purple')
 ##     pro.H1 - probabilities of H1N1 protection
 ##     pro.H3 - probabilities of H3N2 protection
 ##     i.type - character, type of imprinting protection (can be 'HA subtype', 'HA group', or 'NA subtype'). Used in plot titles.
+pars=lk.AS$par
+pro.H1 = proH1.master
+pro.H3 = proH3.master
+i.type = 'HA Sub'
+CIs = AS.CIs
+
 plotmod1 = function(pars, CIs, pro.H1 = 1, pro.H3 = 1, i.type = NULL){
   
   ## Parse paramter inputs ##
@@ -65,8 +72,9 @@ plotmod1 = function(pars, CIs, pro.H1 = 1, pro.H3 = 1, i.type = NULL){
   
   ## Calculate predicted case distributions, as in the likelihood ##
   age.baseline = (b*a0.4 +b*r5.10*a5.10 +b*r11.17*a11.17+b*r18.24*a18.24+b*r25.31*a25.31+ b*r32.38*a32.38+ b*r39.45*a39.45+ b*r46.52*a46.52+ b*r53.59*a53.59+ b*r60.66*a60.66+ b*r67.73*a67.73+ b*r74.80*a74.80+ b*r81.90p*a81.90plus)
-  age.baseline.rr = age.baseline # Save unnormalized version
+  age.baseline.rr = age.baseline/max(age.baseline) # Save unnormalized version
   age.baseline = age.baseline/rowSums(age.baseline)
+  age.demog = (age.baseline*demog)/rowSums(age.baseline*demog)
   imprinting.H1 = (pro.H1*rPro.H1+(1-pro.H1))
   imprinting.H3 = (pro.H3*rPro.H3+(1-pro.H3))
   
@@ -74,7 +82,7 @@ plotmod1 = function(pars, CIs, pro.H1 = 1, pro.H3 = 1, i.type = NULL){
   ## Plot row 15, which represents the last observed season, and aligns 0-year-olds with the first column (2015 birth year)
   ## No need to take the mean, because age-specific predictions are identical across countries and years
   par(mar = c(3.5, 4, 3.5, 5))
-  plot(0:97, age.baseline.rr[13,], main = 'Age effects', ylab = 'relative risk', xlab = 'age', bty = 'n', ylim = c(0,1))
+  plot(0:97, age.baseline.rr[13,], main = 'Age effects', ylab = 'relative risk', xlab = 'age', bty = 'n', ylim = c(0,1.1))
   mtext('A', side = 3, line = 1.5, at = -5, font = 2)
   #abline(h = 1, lty = 2)
   
@@ -82,11 +90,11 @@ plotmod1 = function(pars, CIs, pro.H1 = 1, pro.H3 = 1, i.type = NULL){
   ## Plot the colmeans (mean predicted protection across birth years)
   ## This is necessary because imprinting reconstructions differ slightly from year to year, as children (with recent birth years) get older.
   if(is.na(pars['rPro.H1'])){ # If no imprinting protection par, this factor was not relevant to the model fit, and we plot an empty windwo
-    plot(1, 1, xlim = c(0,1), ylim = c(0,1), col = 'white', xaxt = 'n', yaxt = 'n', xlab = '', ylab = '', main = paste('Imprinting protection\n', i.type, sep = ''), bty = 'n')
+    plot(1, 1, xlim = c(0,1), ylim = c(0,1.1), col = 'white', xaxt = 'n', yaxt = 'n', xlab = '', ylab = '', main = paste('Imprinting protection\n', i.type, sep = ''), bty = 'n')
     text(.5, .5, 'NA', cex = 2)
   }else{ # Else, if imprinting protection was included in the model, plot mean birth year-specific relative risk, after adjusting for imprinting protection.
     ## Plot just one row here, because predicted protection changes with birth year
-    plot(-2015:-1918, imprinting.H1[13,], col = colH1N1, cex = .7, ylab = 'relative risk', xlab = 'birth year', main = 'Imprinting effects', ylim = c(0,1), bty = 'n', xaxt = 'n')
+    plot(-2015:-1918, imprinting.H1[13,], col = colH1N1, cex = .7, ylab = 'relative risk', xlab = 'birth year', main = 'Imprinting effects', ylim = c(0,1.1), bty = 'n', xaxt = 'n')
     axis(side = 1, at = seq(-2015, -1918, by = 10), labels = seq(2015, 1918, by = -10), line = 0)
     points(-2015:-1918, imprinting.H3[13,], col = colH3N2, cex = .7)
     }
@@ -115,8 +123,8 @@ plotmod1 = function(pars, CIs, pro.H1 = 1, pro.H3 = 1, i.type = NULL){
   
   # 2. calculate predicted distribution, pp, as a function of the parameters:
   # This step gives the model prediction
-  pp.H1 = age.baseline * imprinting.H1
-  pp.H3 = age.baseline * imprinting.H3
+  pp.H1 = age.demog * imprinting.H1
+  pp.H3 = age.demog * imprinting.H3
   ## Return the predicted age distributions of infection. Plot these below against the observed data
   return(list(age = age.baseline.rr, iH1 = imprinting.H1, iH3 = imprinting.H3,
               fits = rbind(rev(colSums(pp.H1/rowSums(pp.H1)*rowSums(H1.master))), rev(colSums(pp.H3/rowSums(pp.H3)*rowSums(H3.master))))))
@@ -138,7 +146,7 @@ npred = AN$fits
 ######### Plot AZ age fits
 tiff(file = plot5, width = 3, height = 1.5, units = 'in', res = 400)
 par(mar = c(3,3,1,1)+.5, mgp = c(2,1,0))
-plot(0:97, AN$age[13,], main = '', ylab = 'relative risk', xlab = 'age', bty = 'n', ylim = c(0,1))
+plot(0:97, AN$age[13,], main = '', ylab = 'relative risk', xlab = 'age', bty = 'n', ylim = c(0,1.1))
 #abline(h = 1, lty = 2)
 dev.off()
 
@@ -146,7 +154,7 @@ dev.off()
 ######### Plot AZ imprinting fits
 tiff(file = plot6, width = 3, height = 1.5, units = 'in', res = 400)
 par(mar = c(3,3,1,1)+.5, mgp = c(2,1,0))
-plot(-2015:-1918, AN$iH1[13,], col = 'dodgerblue', cex = .7, ylab = 'relative risk', xlab = 'birth year', main = '', ylim = c(0,1), bty = 'n', xaxt = 'n')
+plot(-2015:-1918, AN$iH1[13,], col = 'dodgerblue', cex = .7, ylab = 'relative risk', xlab = 'birth year', main = '', ylim = c(0,1.1), bty = 'n', xaxt = 'n')
 axis(side = 1, at = seq(-2015, -1918, by = 10), labels = seq(2015, 1918, by = -10), line = 0)
 points(-2015:-1918, AN$iH3[13,], col = 'firebrick1', cex = .7)
 dev.off()
@@ -162,10 +170,10 @@ lines(xx, rev(apred[1,]), col = cols[2], lwd = 1.7)
 lines(xx, rev(gpred[1,]), col = cols[3], lwd = 1.7)
 lines(xx, rev(spred[1,]), col = cols[4], lwd = 1.7)
 lines(xx, rev(npred[1,]), col = cols[5], lwd = 1.7)
-legend('topright', legend = c('observed', expression(paste('AN fit, ', Delta, 'AIC=', 0.00)), 
-                              expression(paste('AS fit, ', Delta, 'AIC=', 23.42)),
-                              expression(paste('AG fit, ', Delta, 'AIC=', 245.18)),
-                              expression(paste('A   fit, ', Delta, 'AIC=', 380.47))), pch = c(15, NA, NA, NA, NA), col = c('gray', cols[5:2]), lwd = c(NA,2,2,1,1), bty = 'n')
+legend('topright', legend = c('observed', expression(paste('AN fit, ', Delta, 'AIC=', 0.00)),
+                              expression(paste('AS fit, ', Delta, 'AIC=', 34.54)),
+                              expression(paste('AG fit, ', Delta, 'AIC=', 249.06)),
+                              expression(paste('A   fit, ', Delta, 'AIC=', 385.42))), pch = c(15, NA, NA, NA, NA), col = c('gray', cols[5:2]), lwd = c(NA,2,2,1,1), bty = 'n')
 dev.off()
 
 
@@ -178,10 +186,10 @@ lines(xx, rev(apred[2,]), col = cols[2], lwd = 1.7)
 lines(xx, rev(gpred[2,]), col = cols[3], lwd = 1.7)
 lines(xx, rev(spred[2,]), col = cols[4], lwd = 1.7)
 lines(xx, rev(npred[2,]), col = cols[5], lwd = 1.7)
-legend('topright', legend = c('observed', expression(paste('AN fit, ', Delta, 'AIC=', 0.00)), 
-                              expression(paste('AS fit, ', Delta, 'AIC=', 23.42)),
-                              expression(paste('AG fit, ', Delta, 'AIC=', 245.18)),
-                              expression(paste('A   fit, ', Delta, 'AIC=', 380.47))), pch = c(15, NA, NA, NA, NA), col = c('gray', cols[5:2]), lwd = c(NA,2,2,1,1), bty = 'n')
+legend('topright', legend = c('observed', expression(paste('AN fit, ', Delta, 'AIC=', 0.00)),
+                              expression(paste('AS fit, ', Delta, 'AIC=', 34.54)),
+                              expression(paste('AG fit, ', Delta, 'AIC=', 249.06)),
+                              expression(paste('A   fit, ', Delta, 'AIC=', 385.42))), pch = c(15, NA, NA, NA, NA), col = c('gray', cols[5:2]), lwd = c(NA,2,2,1,1), bty = 'n')
 dev.off()
 
 

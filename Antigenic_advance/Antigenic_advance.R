@@ -26,33 +26,37 @@ H1N1_aa_post2009 = read.table(file = 'nextstrain_data/nextstrain_flu_seasonal_h1
 H1N1_aa_pre2009 = read.table(file = "nextstrain_data/elife-01914-fig3-data1-v1.tsv", sep = '\t', header = TRUE) 
 H3N2_aa_bedford_elife = subset(H1N1_aa_pre2009, lineage == 'H3N2')
 H1N1_aa_pre2009 = subset(H1N1_aa_pre2009, lineage == 'H1N1' & year > 2001) # Extract seasonal H1N1 cases from the relevant time period
-H1N1_aa_pre2009$Full.date = as.character(H1N1_aa_pre2009$Full.date)
-H1N1_aa_pre2009$Full.date = as.Date(H1N1_aa_pre2009$Full.date, format = '%m/%d/%y')
-H1N1_aa_pre2009$decimal.date = decimal_date(H1N1_aa_pre2009$Full.date)
+
+## Convert pre_2009 data to decimal date format
+H1N1_aa_pre2009$Full.date = as.character(H1N1_aa_pre2009$Full.date) # First convert to character
+H1N1_aa_pre2009$Full.date = as.Date(H1N1_aa_pre2009$Full.date, format = '%m/%d/%y') # Then to date
+H1N1_aa_pre2009$decimal.date = decimal_date(H1N1_aa_pre2009$Full.date) # Then to decimal date
 ## Fill in entries with no clear date info using the raw year
 replace = which(is.na(H1N1_aa_pre2009$decimal.date))
 H1N1_aa_pre2009$decimal.date[replace] = H1N1_aa_pre2009$year[replace]
+
+
 
 
 #####################################################################################################################
 ### Rescale estimates from bedford et al., eLife to match the magnitude of estimates from nextstrain (uses neher et al. methods)
 ##  H1N1 estimates are not available from the same time periods in both data sets, but H3N2 estimates from 1997-2011 are available in both data sets
 ##  Use paired H3N2 estimates to re-scale the Bedford et al. estimates to match nextstrain estimates
-## First, find the mean antigenic location along dimension 1 (Bedford et al) per year
+## First, find the mean antigenic location along dimension 1 per year
 bedford_H3N2_yearly = sapply(1997:2011, function(xx){valid = H3N2_aa_bedford_elife$year == xx; mean(H3N2_aa_bedford_elife$ag1[valid])}); names(bedford_H3N2_yearly) = 1997:2011
 ##  Repeat for Nextstrain data
 ## Tree model
 neher_H3N2_yearly_tree = sapply(1997:2011, function(xx){valid = floor(H3N2_aa$Num.Date) == xx; mean(H3N2_aa$CTiter[valid], na.rm = TRUE)})
 ## Sub model
-neher_H3N2_yearly_tree = sapply(1997:2011, function(xx){valid = floor(H3N2_aa$Num.Date) == xx; mean(H3N2_aa$CTiterSub[valid], na.rm = TRUE)})
+neher_H3N2_yearly_sub = sapply(1997:2011, function(xx){valid = floor(H3N2_aa$Num.Date) == xx; mean(H3N2_aa$CTiterSub[valid], na.rm = TRUE)})
+
+### Find the scaling factor that standardizes estimates to span the same range
+scale_factor = diff(range(neher_H3N2_yearly_tree))/diff(range(bedford_H3N2_yearly))
+
 
 ## Visualise the raw mean locations
 tiff(outfile2, width = 7, height = 7, res = 400, units = 'in')
 par(mfrow = c(1,1))
-# plot(1997:2011, bedford_H3N2_yearly-min(bedford_H3N2_yearly), xlab = 'year', ylab = 'antigenic location', main = 'Raw estimates')
-# points(1997:2011, neher_H3N2_yearly-min(neher_H3N2_yearly), col = 'red')
-## Find the scaling factor that standardizes estimates to span the same range
-scale_factor = diff(range(neher_H3N2_yearly_tree))/diff(range(bedford_H3N2_yearly))
 ## Rescale and visualize the rescaled points
 plot(1997:2011, (bedford_H3N2_yearly-min(bedford_H3N2_yearly))*scale_factor, xlab = 'calendar year of isolate collection', ylab = 'mean antigenic location')
 points(1997:2011, neher_H3N2_yearly_tree-min(neher_H3N2_yearly_tree), col = 'red')
@@ -87,19 +91,22 @@ H1N1_aa_pre2009$ag1 = H1N1_aa_pre2009$ag1*scale_factor
 yrs = floor(min(H3N2_aa$Num.Date, na.rm = TRUE)):max(floor(H3N2_aa$Num.Date), na.rm = TRUE) # Years of interest
 CTiter.raw = CTiterSub.raw = numeric(length(yrs)) # Initialize raw divergence
 names(CTiter.raw) = names(CTiterSub.raw) = paste(yrs, yrs+1, sep = "-")
-baseline = colMeans(subset(H3N2_aa, Num.Date < 1997.77, select = c('CTiter', 'CTiterSub')))
+baseline = colMeans(subset(H3N2_aa, Num.Date < 1997.77, select = c('CTiter', 'CTiterSub'))) # Get initial values
+# Get means per year
 for(yy in 1:length(yrs)){
   valid = which(H3N2_aa$Num.Date >= yrs[yy]+.77 & H3N2_aa$Num.Date < yrs[yy]+1.77) # Extract all the sample indices from a given NH season (week 40-week 39)
   CTiter.raw[yy] = mean(H3N2_aa[valid, 'CTiter'])
   CTiterSub.raw[yy] = mean(H3N2_aa[valid, 'CTiterSub'])
 }
 plot(yrs, CTiter.raw)
-points(yrs, CTiterSub.raw)
+points(yrs, CTiterSub.raw, col = 'blue')
+legend('topleft', c('tree model', 'sub model'), fill = c(1,4))
+
 ## Find the season-to-season difference
 CTiter.H3N2 = c('1997-1998' = 0, diff(CTiter.raw))
 CTiterSub.H3N2 = c('1997-1998' = 0, diff(CTiterSub.raw))
-plot(seq(1997.5, 2018.5, by = 1), CTiter.H3N2, col = 'red', main = 'H3N2 CTiter'); abline(h = 0)
-plot(seq(1997.5, 2018.5, by = 1), CTiterSub.H3N2, col = 'red', main = 'H3N2 CTiterSub'); abline(h = 0)
+plot(seq(1997.5, 2018.5, by = 1), CTiter.H3N2, col = 'red', main = 'H3N2 CTiter', ylab = 'delta_postion'); abline(h = 0)
+plot(seq(1997.5, 2018.5, by = 1), CTiterSub.H3N2, col = 'red', main = 'H3N2 CTiterSub', ylab = 'delta_position'); abline(h = 0)
 
 
 ############################################# Post-pandemic H1N1 ############################################# 
@@ -116,11 +123,13 @@ for(yy in 1:length(yrs)){
 }
 plot(yrs, CTiter.raw, col = 'blue', main = 'H1N1 post-pandemic CTiter')
 points(yrs, CTiterSub.raw, col = 'red', main = 'H1N1 post-pandemic CTiterSub')
+legend('topleft', c('tree model', 'sub model'), fill = c(4,2))
 ## Find the season-to-season difference
 CTiter.H1N1 = c('2009-2010' = 0, diff(CTiter.raw))
 CTiterSub.H1N1 = c('2009-2010' = 0, diff(CTiterSub.raw))
-plot(seq(2009.5, 2018.5, by = 1), CTiter.H1N1, col = 'blue'); abline(h = 0)
-points(seq(2009.5, 2018.5, by = 1), CTiterSub.H1N1, col = 'red'); abline(h = 0)
+plot(seq(2009.5, 2018.5, by = 1), CTiter.H1N1, col = 'blue',ylab = 'delta_postion'); abline(h = 0)
+points(seq(2009.5, 2018.5, by = 1), CTiterSub.H1N1, col = 'red',ylab = 'delta_postion'); abline(h = 0)
+legend('bottomleft', c('tree model', 'sub model'), fill = c(4,2))
 
 
 
@@ -150,7 +159,7 @@ plot(yrs, aassn.raw, col = 'blue')
 
 ## Find the season-to-season difference
 aassn = c('2002-2003' = 0, diff(aassn.raw))
-plot(seq(2002.5, 2008.5, by = 1), aassn, col = 'blue'); abline(h = 0)
+plot(seq(2002.5, 2008.5, by = 1), aassn, col = 'blue', ylab = 'delta_postion'); abline(h = 0)
 
 
 
@@ -165,6 +174,7 @@ plot(seq(2002.5, 2008.5, by = 1), aassn, col = 'blue'); abline(h = 0)
 setwd('../2017_AZ/')
 source('00-Inputs_multinomial.R')
 setwd('../Antigenic_advance/')
+
 #######################################
 ## Reformat H3N2 data for plotting
 ######################################
@@ -206,7 +216,7 @@ age_bins = function(age_tab){
               rowSums(age_tab[,as.character(41:60)]),
               rowSums(age_tab[,as.character(61:85)]))
   out = out/rowSums(out)
-  colnames(out) = c('0-5', '6-40', '41-60', '61-85')
+  colnames(out) = c('0-10', '11-40', '41-60', '61-85')
   as.data.frame(out)
 }
 
@@ -359,11 +369,11 @@ barplots_sub
 
 
 ### Set up anova-like plot
-## Calculate pearson correlation coefficients for each variable
+## Calculate spearman correlation coefficients for each variable
 ## Only calculate for H3N2 because there are too few data points for other types
 get.cor = function(xx){
   valid = subset(H3.age.bins, variable == xx)
-  out = cor.test(valid$CTiter, valid$value, method = 'pearson')
+  out = cor.test(valid$CTiter, valid$value, method = 'spearman')
   c(r = as.numeric(out$estimate), p = as.numeric(out$p.value), variable = xx)
 }
 cor.df = as.data.frame(t(sapply(unique(H3.age.bins$variable), FUN = get.cor)))
@@ -375,7 +385,7 @@ cor.df$CTiter = NA
 ## Repeat for sub model
 get.cor = function(xx){
   valid = subset(H3.age.bins_sub, variable == xx)
-  out = cor.test(valid$CTiterSub, valid$value, method = 'pearson')
+  out = cor.test(valid$CTiterSub, valid$value, method = 'spearman')
   c(r = as.numeric(out$estimate), p = as.numeric(out$p.value), variable = xx)
 }
 cor.df.sub = as.data.frame(t(sapply(unique(H3.age.bins_sub$variable), FUN = get.cor)))
@@ -414,6 +424,7 @@ anova_like_plot2 =  ggplot()+
   ylab('Fraction cases') +
   theme(legend.position="top")
 anova_like_plot2
+ggsave(filename = '../figures/Antigenic_advance_corplot_sub.tiff', height = 3, width = 7)
 
 
 
@@ -449,29 +460,7 @@ fulldat$seasontype = paste(fulldat$type, fulldat$season, sep = '_')
 
 ## Convert to long format (list rows repeatedly for the number of observed cases)
 longdat = fulldat[rep(1:nrow(fulldat), times = fulldat$count), ]
-## Density plots
-H1pdm_dens = ggplot(data = subset(longdat, type == 'H1N1pandemic')) + 
-  geom_density(aes(x = age, color = CTiter, group = seasontype), fill = NA) +
-  theme_classic() +
-  scale_color_viridis_c(option = "plasma",  na.value = 'gray') +
-  facet_wrap(.~type)
-
-H1ssn_dens = ggplot(data = subset(longdat, type == 'H1N1seasonal')) + 
-  geom_density(aes(x = age, color = CTiter, group = seasontype), fill = NA) +
-  theme_classic() +
-  scale_color_viridis_c(option = "plasma",  na.value = 'gray') +
-  facet_wrap(.~type)
-
-H3_dens = ggplot(data = subset(longdat, type == 'H3N2')) + 
-  geom_density(aes(x = age, color = CTiter, group = seasontype), fill = NA) +
-  theme_classic() +
-  scale_color_viridis_c(option = "plasma",  na.value = 'gray') +
-  facet_wrap(.~type)
-
-grid.arrange(H3_dens, H1pdm_dens, H1ssn_dens, nrow = 1)
-
-
-
+## Density plots, "tree" model
 longdat$type = factor(longdat$type, levels = c('H3N2','H1N1pandemic', 'H1N1seasonal'), labels = c('H3N2', 'H1N1 post-2009', 'H1N1 pre-2009'))
 ggplot(data = (longdat)) + 
   geom_density(aes(x = age, color = CTiter, group = seasontype), fill = NA) +
@@ -480,6 +469,16 @@ ggplot(data = (longdat)) +
   facet_wrap(.~type)
 
 ggsave(filename = '../figures/Antigenic_advance_dens.tiff', height = 2.5, width = 7)
+
+
+## Density plots, "tree" model
+ggplot(data = (longdat)) + 
+  geom_density(aes(x = age, color = CTiterSub, group = seasontype), fill = NA) +
+  theme_bw() +
+  scale_color_viridis_c(option = "plasma",  na.value = 'gray', name = 'advance') +
+  facet_wrap(.~type)
+
+ggsave(filename = '../figures/Antigenic_advance_dens_submodel.tiff', height = 2.5, width = 7)
 
 
 

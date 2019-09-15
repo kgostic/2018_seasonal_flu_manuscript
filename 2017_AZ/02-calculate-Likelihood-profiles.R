@@ -31,7 +31,7 @@ outfile2 = 'processed-data/AZ_CIs.RData'
 one_prof_point = function(pvec, fixpar, fixed.par.value, lows, highs, H1.protection.input, H3.protection.input){
 drop = which(names(pvec) == fixpar) # Figure out index of fixed par
 # Optimize the likelihood with respect to all free paramters, other than the fixed par
-optim(par = pvec[-drop], fn = profile_func, fixed.par.name = fixpar, fixed.par.value = fixed.par.value, wPro.H1 = H1.protection.input, dat.H1 = H1.master, wPro.H3 =  H3.protection.input, dat.H3 = H3.master, a0.4 = a0.4, a5.10 = a5.10, a11.17 = a11.17, a18.24 = a18.24, a25.31 = a25.31, a32.38 = a32.38, a39.45 = a39.45, a46.52 = a46.52, a53.59 = a53.59, a60.66 = a60.66, a67.73 = a67.73, a74.80 = a74.80, a81.90plus = a81.90plus, method = 'L-BFGS-B', lower = lows[-drop], upper = highs[-drop])$value
+optim(par = pvec[-drop], fn = profile_func, fixed.par.name = fixpar, fixed.par.value = fixed.par.value, wPro.H1 = H1.protection.input, dat.H1 = H1.master, wPro.H3 =  H3.protection.input, dat.H3 = H3.master, a0.4 = a0.4, a5.10 = a5.10, a11.17 = a11.17, a18.24 = a18.24, a25.31 = a25.31, a32.38 = a32.38, a39.45 = a39.45, a46.52 = a46.52, a53.59 = a53.59, a60.66 = a60.66, a67.73 = a67.73, a74.80 = a74.80, a81.90plus = a81.90plus, dem = demog, method = 'L-BFGS-B', lower = lows[-drop], upper = highs[-drop])$value
 }
 
 # ## Test
@@ -77,13 +77,13 @@ stopCluster(cl)
 # Profiles for imprinting protection pars
 ###########################
 ###### Initialize storage
-grid = seq(.005, 1, by = .005) # Define grid of relative risk points to test for each paramter
+ll = length(grid)
+grid = seq(.005, 1.2, by = 0.005) # Define grid of relative risk points to test for each paramter
 # Store provile neg log likelihood values in a matrix, with the fixed parameter listed on rows, and grid value listed on columns
 AG.imp.prof = AS.imp.prof = AN.imp.prof = matrix(NA, nrow = 2, ncol = length(grid), dimnames = list(c('rPro.H1', 'rPro.H3'), grid))
 cl = makeCluster(detectCores()-1) # Make cluster
 clusterExport(cl, ls()) # Export all variables to cluster
 pro.pars = c('rPro.H1', 'rPro.H3')
-## For each age paramter
 for(pp in pro.pars){
   AG.imp.prof[pp, ] = parSapply(cl = cl, X = grid, FUN = one_prof_point, pvec = lk.AG$par, fixpar = pp, lows = rep(.001, 14), highs = c(1,1, rep(5, 12)), H1.protection.input = prog1.master, H3.protection.input = prog2.master)
 
@@ -94,81 +94,81 @@ for(pp in pro.pars){
 stopCluster(cl)
 
 ## Add 0s for columns corresponding to par values >1. This will pad the matrices so they have the same number of columns and same column names as the age profile matrices above
-fill = matrix(NA, nrow = 2, ncol = 200); colnames(fill) = seq(1.005, 2, by = .005)
+fill = matrix(NA, nrow = 2, ncol = ll-length(grid)); colnames(fill) = seq(1.005, 2, by = .005)
 AG.imp.prof = cbind(AG.imp.prof, fill)
 AS.imp.prof = cbind(AS.imp.prof, fill)
 AN.imp.prof = cbind(AN.imp.prof, fill)
 
 
 save(A.age.prof, AS.age.prof, AN.age.prof, AG.age.prof, AS.imp.prof, AG.imp.prof, AN.imp.prof, file = outfile1)
-
-
 load('processed-data/AZ_profiles.RData')
 
-# ####################################
-# ## Visually inspect likelihood profiles to make sure they align with best estimates for each parameter
-# ####################################
-# ## Start with lk.A age profiles
-# par(mfrow = c(3,4))
-# for(rr in 1:12){
-#   # Plot the profiles
-#   plot(as.numeric(colnames(A.age.prof)), A.age.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(A.age.prof)[rr], ylim = lk.A$value+c(-3, 20), xlim = lk.A$par[rr]+c(-.2, .2))
-#   points(lk.A$par[rr], lk.A$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
-#   abline(v = lk.A$par[rr], col = 'red')
-# }
-# 
-# ## Repeat for lk.AG
-# for(rr in 1:12){
-#   # Plot the profiles
-#   plot(as.numeric(colnames(AG.age.prof)), AG.age.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(AG.age.prof)[rr], ylim = lk.AG$value+c(-3, 20), xlim = lk.AG$par[rr+2]+c(-.2, .2))
-#   points(lk.AG$par[rr+2], lk.AG$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
-#   abline(v = lk.AG$par[rr+2], col = 'red')
-# }
-# 
-# ## Repeat for lk.AS
-# for(rr in 1:12){
-#   # Plot the profiles
-#   plot(as.numeric(colnames(AS.age.prof)), AS.age.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(AS.age.prof)[rr], ylim = lk.AS$value+c(-3, 20), xlim = lk.AS$par[rr+2]+c(-.2, .2))
-#   points(lk.AS$par[rr+2], lk.AS$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
-#   abline(v = lk.AS$par[rr+2], col = 'red')
-# }
-# 
-# ## Repeat for lk.AN
-# for(rr in 1:12){
-#   # Plot the profiles
-#   plot(as.numeric(colnames(AN.age.prof)), AN.age.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(AN.age.prof)[rr], ylim = lk.AN$value+c(-3, 20), xlim = lk.AN$par[rr+2]+c(-.2, .2))
-#   points(lk.AN$par[rr+2], lk.AN$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
-#   abline(v = lk.AN$par[rr+2], col = 'red')
-# }
-# 
-# 
-# 
-# ### Repeat checks for imprinting pars
-# ## Repeat for lk.AG
-# for(rr in 1:2){
-#   # Plot the profiles
-#   plot(as.numeric(colnames(AG.imp.prof)), AG.imp.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(AG.imp.prof)[rr], ylim = lk.AG$value+c(-3, 20), xlim = lk.AG$par[rr]+c(-.2, .2))
-#   points(lk.AG$par[rr], lk.AG$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
-#   abline(v = lk.AG$par[rr], col = 'red')
-# }
-# 
-# ## Repeat for lk.AS
-# for(rr in 1:2){
-#   # Plot the profiles
-#   plot(as.numeric(colnames(AS.imp.prof)), AS.imp.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(AS.imp.prof)[rr], ylim = lk.AS$value+c(-3, 20), xlim = lk.AS$par[rr]+c(-.2, .2))
-#   points(lk.AS$par[rr], lk.AS$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
-#   abline(v = lk.AS$par[rr], col = 'red')
-# }
-# 
-# ## Repeat for lk.AN
-# for(rr in 1:2){
-#   # Plot the profiles
-#   plot(as.numeric(colnames(AN.imp.prof)), AN.imp.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(AN.imp.prof)[rr], ylim = lk.AN$value+c(-3, 20), xlim = lk.AN$par[rr]+c(-.2, .2))
-#   points(lk.AN$par[rr], lk.AN$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
-#   abline(v = lk.AN$par[rr], col = 'red')
-# }
-# 
-# ## All looks good!!! Move on.
+
+
+####################################
+## Visually inspect likelihood profiles to make sure they align with best estimates for each parameter
+####################################
+## Start with lk.A age profiles
+par(mfrow = c(3,4))
+for(rr in 1:12){
+  # Plot the profiles
+  plot(as.numeric(colnames(A.age.prof)), A.age.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(A.age.prof)[rr], ylim = lk.A$value+c(-3, 20), xlim = lk.A$par[rr]+c(-.2, .2))
+  points(lk.A$par[rr], lk.A$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
+  abline(v = lk.A$par[rr], col = 'red')
+}
+
+## Repeat for lk.AG
+for(rr in 1:12){
+  # Plot the profiles
+  plot(as.numeric(colnames(AG.age.prof)), AG.age.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(AG.age.prof)[rr], ylim = lk.AG$value+c(-3, 20), xlim = lk.AG$par[rr+2]+c(-.2, .2))
+  points(lk.AG$par[rr+2], lk.AG$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
+  abline(v = lk.AG$par[rr+2], col = 'red')
+}
+
+## Repeat for lk.AS
+for(rr in 1:12){
+  # Plot the profiles
+  plot(as.numeric(colnames(AS.age.prof)), AS.age.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(AS.age.prof)[rr], ylim = lk.AS$value+c(-3, 20), xlim = lk.AS$par[rr+2]+c(-.2, .2))
+  points(lk.AS$par[rr+2], lk.AS$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
+  abline(v = lk.AS$par[rr+2], col = 'red')
+}
+
+## Repeat for lk.AN
+for(rr in 1:12){
+  # Plot the profiles
+  plot(as.numeric(colnames(AN.age.prof)), AN.age.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(AN.age.prof)[rr], ylim = lk.AN$value+c(-3, 20), xlim = lk.AN$par[rr+2]+c(-.2, .2))
+  points(lk.AN$par[rr+2], lk.AN$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
+  abline(v = lk.AN$par[rr+2], col = 'red')
+}
+
+
+
+### Repeat checks for imprinting pars
+## Repeat for lk.AG
+for(rr in 1:2){
+  # Plot the profiles
+  plot(as.numeric(colnames(AG.imp.prof)), AG.imp.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(AG.imp.prof)[rr], ylim = lk.AG$value+c(-3, 20), xlim = lk.AG$par[rr]+c(-.2, .2))
+  points(lk.AG$par[rr], lk.AG$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
+  abline(v = lk.AG$par[rr], col = 'red')
+}
+
+## Repeat for lk.AS
+for(rr in 1:2){
+  # Plot the profiles
+  plot(as.numeric(colnames(AS.imp.prof)), AS.imp.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(AS.imp.prof)[rr], ylim = lk.AS$value+c(-3, 20), xlim = lk.AS$par[rr]+c(-.2, .2))
+  points(lk.AS$par[rr], lk.AS$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
+  abline(v = lk.AS$par[rr], col = 'red')
+}
+
+## Repeat for lk.AN
+for(rr in 1:2){
+  # Plot the profiles
+  plot(as.numeric(colnames(AN.imp.prof)), AN.imp.prof[rr,], xlab = 'par value', ylab = 'neg log lk', main = rownames(AN.imp.prof)[rr], ylim = lk.AN$value+c(-3, 20), xlim = lk.AN$par[rr]+c(-.2, .2))
+  points(lk.AN$par[rr], lk.AN$value, col = 'red') # Mark the MLE in red and make sure the profile intersects it.
+  abline(v = lk.AN$par[rr], col = 'red')
+}
+
+## All looks good!!! Move on.
 
 
 
